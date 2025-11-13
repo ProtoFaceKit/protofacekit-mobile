@@ -1,0 +1,4 @@
+export const FACE_PANEL_WIDTH = 64;
+export const FACE_PANEL_HEIGHT = 32;
+export const FACE_PANEL_COUNT = 2;
+export const FACE_PANEL_TOTAL_WIDTH = FACE_PANEL_WIDTH * FACE_PANEL_COUNT;

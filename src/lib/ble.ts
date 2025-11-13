@@ -1,4 +1,3 @@
-import { dev } from "$app/environment";
 import {
     connect,
     listServices,
@@ -7,6 +6,7 @@ import {
     stopScan,
     type BleDevice,
 } from "@mnlphlp/plugin-blec";
+import { ExpressionType, type Face } from "$lib/types/data";
 
 const CONTROLLER_SERVICE_ID = "bd6f7967-023c-4f0b-aad4-16a8a116f62c";
 
@@ -22,6 +22,7 @@ export function discoverController(
     let discovered = false;
     return new Promise((resolve, reject) => {
         startScan(async (devices) => {
+            console.log(devices);
             for (const device of devices) {
                 if (device.name.startsWith("ProtoFaceKit")) {
                     discovered = true;
@@ -88,9 +89,10 @@ export async function writeFace(face: Face) {
             );
 
             const chunks = encodeRLEPixelData(frame.pixels);
-            console.log(chunks[0].length);
+            console.log(chunks[0]);
 
             for (const chunk of chunks) {
+                console.log(chunk);
                 await send(
                     FRAME_CHUNK_CHARACTERISTIC,
                     chunk,
@@ -109,103 +111,11 @@ export async function writeFace(face: Face) {
     );
 }
 
-export function testFace(): Face {
-    return {
-        expressions: {
-            [ExpressionType.IDLE]: {
-                frames: [testFaceFrame()],
-            },
-        },
-    };
-}
-
-function testFaceFrame(): FaceFrame {
-    type Pixel = [number, number, number];
-
-    const pixels: Pixel[] = [];
-
-    // Colors
-    const colors = {
-        bg: [0, 0, 0] as Pixel, // black background
-        line: [0, 255, 255] as Pixel, // cyan glowing lines
-        eye: [0, 180, 255] as Pixel, // brighter eyes
-        highlight: [0, 255, 200] as Pixel, // accent highlights
-    };
-
-    // Build each row
-    for (let y = 0; y < 32; y++) {
-        for (let x = 0; x < 128; x++) {
-            let pixel: Pixel;
-
-            // Left eye (sharp triangle)
-            if (y >= 8 && y <= 14 && x >= 30 && x <= 38 && y - 8 <= x - 30) {
-                pixel = colors.eye;
-            }
-            // Right eye (mirror)
-            else if (
-                y >= 8 &&
-                y <= 14 &&
-                x >= 90 &&
-                x <= 98 &&
-                y - 8 <= 98 - x
-            ) {
-                pixel = colors.eye;
-            }
-            // Face outline (top diagonal lines)
-            else if (
-                (y === 4 && x >= 40 && x <= 88) ||
-                (y === 5 && x >= 38 && x <= 90)
-            ) {
-                pixel = colors.line;
-            }
-            // Jaw lines
-            else if (
-                (y === 27 && x >= 40 && x <= 88) ||
-                (y === 26 && x >= 42 && x <= 86)
-            ) {
-                pixel = colors.line;
-            }
-            // Mouth / chin accent
-            else if (y === 24 && x >= 54 && x <= 74) {
-                pixel = colors.highlight;
-            }
-            // Nose line (center vertical)
-            else if (x === 64 && y >= 16 && y <= 20) {
-                pixel = colors.line;
-            } else {
-                pixel = [0, 0, 0];
-            }
-
-            pixels.push(pixel);
-        }
-    }
-
-    return { duration: 100, pixels };
-}
-
-export interface Face {
-    expressions: Partial<Record<ExpressionType, FaceExpression>>;
-}
-
-export enum ExpressionType {
-    IDLE = 0,
-    TALKING = 1,
-}
-
-export interface FaceExpression {
-    frames: FaceFrame[];
-}
-
-export interface FaceFrame {
-    pixels: [number, number, number][];
-    duration: number;
-}
-
 // RLE encoded entry size (Used to prevent breaking entries)
 const RLE_ENTRY_SIZE = 4;
 
 /// Max size for RLE data that can be sent over the wire
-const MAX_CHUNK_SIZE = 248;
+const MAX_CHUNK_SIZE = 200;
 
 function encodeRLEPixelData(pixels: [number, number, number][]): number[][] {
     const chunks: number[][] = [];
@@ -220,7 +130,7 @@ function encodeRLEPixelData(pixels: [number, number, number][]): number[][] {
         // Count consecutive identical pixels, up to max u8 (255)
         while (
             i + runLength < pixels.length &&
-            runLength < 0xff &&
+            runLength < 255 &&
             pixels[i + runLength][0] === r &&
             pixels[i + runLength][1] === g &&
             pixels[i + runLength][2] === b
@@ -234,11 +144,7 @@ function encodeRLEPixelData(pixels: [number, number, number][]): number[][] {
             currentChunk = [];
         }
 
-        // Encode length
-        currentChunk.push(runLength & 0xff);
-
-        // Encode color bytes
-        currentChunk.push(r & 0xff, g & 0xff, b & 0xff);
+        currentChunk.push(runLength & 0xff, r & 0xff, g & 0xff, b & 0xff);
 
         i += runLength;
     }

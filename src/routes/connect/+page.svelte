@@ -1,8 +1,10 @@
 <script lang="ts">
-    import { discoverController, testFace, writeFace } from "$lib/ble";
+    import { discoverController, writeFace } from "$lib/ble";
+    import FacePainter from "$lib/components/face/FacePainter.svelte";
     import FaceRenderer from "$lib/components/face/FaceRenderer.svelte";
     import PermissionGuard from "$lib/components/PermissionGuard.svelte";
     import ScanDevices from "$lib/components/ScanDevices.svelte";
+    import { testFace } from "$lib/testData/testFace";
     import { connect } from "@mnlphlp/plugin-blec";
 
     async function flashTest() {
@@ -14,6 +16,8 @@
         writeFace(testFace());
     }
 </script>
+
+<FacePainter />
 
 <FaceRenderer face={testFace()} />
 

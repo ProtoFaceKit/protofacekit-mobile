@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { ExpressionType, type Face } from "$lib/ble";
+    import { ExpressionType, type Face } from "$lib/types/data";
     import FaceExpressionRenderer from "./FaceExpressionRenderer.svelte";
 
     type Props = {

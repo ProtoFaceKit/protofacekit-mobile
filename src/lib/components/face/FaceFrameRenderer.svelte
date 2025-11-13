@@ -18,7 +18,7 @@
         WebGLRenderer,
     } from "three";
     import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-    import type { FaceFrame } from "$lib/ble";
+    import type { FaceFrame } from "$lib/types/data";
 
     type Props = {
         frame: FaceFrame;
