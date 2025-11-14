@@ -9,8 +9,7 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-text-size-adjust: 100%;
-    color: #f6f6f6;
-    background-color: #2f2f2f;
+    background-color: #111;
 
     /* Color picker styles */
     --cp-bg-color: #2f2b35;
@@ -18,6 +17,14 @@
     --cp-text-color: white;
     --cp-input-color: #524b5c;
     --cp-button-hover-color: #777;
+}
+
+body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    height: 100vh;
+    width: 100%;
+    color: #f6f6f6;
 }
 
 a:hover {
@@ -34,46 +41,78 @@ a:hover {
     color: #535bf2;
 }
 
-h1 {
-    text-align: center;
+/* 1. Use a more-intuitive box-sizing model */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
 }
 
+/* 2. Remove default margin */
+* {
+    margin: 0;
+}
+
+/* 3. Enable keyword animations */
+@media (prefers-reduced-motion: no-preference) {
+    html {
+        interpolate-size: allow-keywords;
+    }
+}
+
+body {
+    /* 4. Add accessible line-height */
+    line-height: 1.5;
+    /* 5. Improve text rendering */
+    -webkit-font-smoothing: antialiased;
+}
+
+/* 6. Improve media defaults */
+img,
+picture,
+video,
+canvas,
+svg {
+    display: block;
+    max-width: 100%;
+}
+
+/* 7. Inherit fonts for form controls */
 input,
-button {
-    border-radius: 8px;
-    border: 1px solid transparent;
-    padding: 0.6em 1.2em;
-    font-size: 1em;
-    font-weight: 500;
-    font-family: inherit;
-    color: #0f0f0f;
-    background-color: #ffffff;
-    transition: border-color 0.25s;
-    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+button,
+textarea,
+select {
+    font: inherit;
 }
 
-button {
-    cursor: pointer;
+/* 8. Avoid text overflows */
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    overflow-wrap: break-word;
 }
 
-button:hover {
-    border-color: #396cd8;
+/* 9. Improve line wrapping */
+p {
+    text-wrap: pretty;
 }
-button:active {
-    border-color: #396cd8;
-    background-color: #e8e8e8;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    text-wrap: balance;
 }
 
-input,
-button {
-    outline: none;
-}
-
-input,
-button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-}
-button:active {
-    background-color: #0f0f0f69;
+/*
+  10. Create a root stacking context
+*/
+#root,
+#__next {
+    isolation: isolate;
 }

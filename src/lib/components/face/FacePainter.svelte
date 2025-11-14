@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { discoverController, writeFace } from "$lib/ble";
+    import { writeFace } from "$lib/ble";
     import { FACE_PANEL_TOTAL_WIDTH } from "$lib/constants";
     import { ExpressionType, type Face, type FaceFrame } from "$lib/types/data";
     import { copyToClipboard } from "$lib/utils/clipboard";
@@ -155,6 +155,7 @@
             canvas.addEventListener("pointerdown", onPointerDown);
             canvas.addEventListener("pointermove", onPointerMove);
             canvas.addEventListener("pointerup", onPointerUp);
+            canvas.addEventListener("pointerout", onPointerUp);
             container.appendChild(canvas);
         }
 
@@ -163,6 +164,7 @@
                 canvas.removeEventListener("pointerdown", onPointerDown);
                 canvas.removeEventListener("pointermove", onPointerMove);
                 canvas.removeEventListener("pointerup", onPointerUp);
+                canvas.removeEventListener("pointerout", onPointerUp);
                 container.removeChild(canvas);
             }
         };
@@ -176,12 +178,6 @@
     }
 
     async function flashTest() {
-        const controller = await discoverController();
-        if (controller === null) return;
-
-        console.log("resolve", controller);
-        await connect(controller.address, () => {});
-        console.log(pixels);
         writeFace({
             expressions: {
                 [ExpressionType.IDLE]: {

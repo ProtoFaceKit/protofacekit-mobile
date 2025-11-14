@@ -1,61 +1,13 @@
-import {
-    connect,
-    listServices,
-    send,
-    startScan,
-    stopScan,
-    type BleDevice,
-} from "@mnlphlp/plugin-blec";
+import { send } from "@mnlphlp/plugin-blec";
 import { ExpressionType, type Face } from "$lib/types/data";
 
-const CONTROLLER_SERVICE_ID = "bd6f7967-023c-4f0b-aad4-16a8a116f62c";
+export const CONTROLLER_SERVICE_ID = "bd6f7967-023c-4f0b-aad4-16a8a116f62c";
 
 const BEGIN_FACE_CHARACTERISTIC = "2a3f5ae2-c3bd-4561-945b-ea5da0787576";
 const DISPLAY_FACE_CHARACTERISTIC = "e66d5e7a-7458-4d71-b625-331062166d74";
 const BEGIN_EXPRESSION_CHARACTERISTIC = "d82855fb-c9ae-4322-9839-89d23839c569";
 const BEGIN_FRAME_CHARACTERISTIC = "21bced55-0b96-4711-a0f5-cd9653aca013";
 const FRAME_CHUNK_CHARACTERISTIC = "05940bf3-cc0f-4349-8ae4-e2bb89385540";
-
-export function discoverController(
-    timeout: number = 10_000,
-): Promise<BleDevice | null> {
-    let discovered = false;
-    return new Promise((resolve, reject) => {
-        startScan(async (devices) => {
-            console.log(devices);
-            for (const device of devices) {
-                if (device.name.startsWith("ProtoFaceKit")) {
-                    discovered = true;
-
-                    connect(device.address, () => {})
-                        .then(() => listServices(device.address))
-                        .then((servicesIn) => {
-                            const services = Array.isArray(servicesIn)
-                                ? servicesIn
-                                : [];
-                            if (
-                                services.find(
-                                    (service) =>
-                                        service.uuid === CONTROLLER_SERVICE_ID,
-                                ) !== undefined
-                            ) {
-                                resolve(device);
-
-                                // Stop the scanner
-                                stopScan().catch(() => {});
-                            }
-                        });
-                }
-            }
-        }, timeout).catch((error) => {
-            if (!discovered) reject();
-        });
-
-        setTimeout(() => {
-            if (!discovered) resolve(null);
-        }, timeout);
-    });
-}
 
 export async function writeFace(face: Face) {
     await send(
