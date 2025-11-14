@@ -13,13 +13,22 @@
     const expression = $derived(face.expressions[expressionType]);
 </script>
 
-<div>
-    {#if expression}
-        <FaceExpressionRenderer {expression} />
-    {/if}
+<div class="container">
+    <div>
+        {#if expression}
+            <FaceExpressionRenderer {expression} />
+        {/if}
+    </div>
+
+    <button onclick={() => (expressionType = ExpressionType.IDLE)}>Idle</button>
+    <button onclick={() => (expressionType = ExpressionType.TALKING)}
+        >Talking</button
+    >
 </div>
 
-<button onclick={() => (expressionType = ExpressionType.IDLE)}>Idle</button>
-<button onclick={() => (expressionType = ExpressionType.TALKING)}
-    >Talking</button
->
+<style>
+    .container {
+        width: 100%;
+        overflow: auto;
+    }
+</style>
