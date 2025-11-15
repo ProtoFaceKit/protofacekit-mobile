@@ -46,16 +46,19 @@
         const totalWidth = faceCanvases.length * FACE_PANEL_WIDTH;
 
         for (let i = 0; i < faceCanvases.length; i += 1) {
-            const faceCanvas = faceCanvases[i];
+            const { ctx, canvas } = faceCanvases[i];
 
+            // Fill the canvas so tis blank
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Fill in all the pixels
             for (let y = 0; y < FACE_PANEL_HEIGHT; y++) {
                 for (let x = 0; x < FACE_PANEL_WIDTH; x++) {
                     const xOffset = i * FACE_PANEL_WIDTH;
 
                     const idx = y * totalWidth + (x + xOffset);
                     const [r, g, b] = frame.pixels[idx];
-
-                    const ctx = faceCanvas.ctx;
 
                     ctx.fillStyle = `rgb(${r},${g},${b})`;
 
@@ -260,7 +263,6 @@
 
 <div class="view">
     <div bind:this={container} class="container"></div>
-    <div bind:this={facesContainer} class="faces-container"></div>
 </div>
 
 <style>
@@ -268,18 +270,15 @@
         display: flex;
         flex-flow: column;
         gap: 1rem;
+        width: 100%;
+        height: 100%;
     }
 
     .container {
         width: 100%;
-        height: 300px;
+        height: 100%;
         position: relative;
         border-radius: 8px;
         overflow: hidden;
-    }
-
-    .faces-container {
-        display: flex;
-        gap: 1rem;
     }
 </style>

@@ -6,6 +6,7 @@
     import DeviceConnecting from "$lib/components/DeviceConnecting.svelte";
     import DeviceConnectError from "$lib/components/DeviceConnectError.svelte";
     import PermissionGuard from "$lib/components/PermissionGuard.svelte";
+    import { deviceContext } from "$lib/context/deviceContext.svelte";
 
     const { children }: LayoutProps = $props();
 
@@ -15,6 +16,12 @@
     let connectError: unknown = $state();
 
     let onDisconnectHandler: VoidFunction = () => {};
+
+    deviceContext.set({
+        get device() {
+            return connected!;
+        },
+    });
 
     async function onAttemptConnect(device: BleDevice) {
         if (connecting !== undefined) return;

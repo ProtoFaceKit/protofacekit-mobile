@@ -1,0 +1,343 @@
+<script lang="ts">
+    import { onMount } from "svelte";
+    import {
+        BoxGeometry,
+        Color,
+        DataTexture,
+        DirectionalLight,
+        DoubleSide,
+        Group,
+        HemisphereLight,
+        Mesh,
+        MeshBasicMaterial,
+        MeshStandardMaterial,
+        NearestFilter,
+        PerspectiveCamera,
+        PlaneGeometry,
+        RGBAFormat,
+        Scene,
+        UnsignedByteType,
+        WebGLRenderer,
+    } from "three";
+    import type { FaceFrame } from "$lib/types/data";
+
+    type Props = {
+        frame: FaceFrame;
+    };
+
+    interface FaceTexture {
+        texture: DataTexture;
+        data: Uint8Array;
+    }
+
+    const { frame }: Props = $props();
+
+    const FACE_PANEL_WIDTH = 64;
+    const FACE_PANEL_HEIGHT = 32;
+
+    let container: HTMLDivElement | undefined;
+    let needsTextureUpdate = false;
+
+    let isDragging = false;
+    let lastInteractionTime = 0;
+    let userCameraX = 0;
+
+    const faceCanvases: FaceTexture[] = [
+        createFaceTexture(),
+        createFaceTexture(),
+    ];
+
+    // Only mark for update when frame changes, don't do the heavy work here
+    $effect(() => {
+        frame; // Track frame changes
+        needsTextureUpdate = true;
+    });
+
+    function createCamera(container: HTMLDivElement) {
+        const { clientWidth, clientHeight } = container;
+        const camera = new PerspectiveCamera(
+            50,
+            clientWidth / clientHeight,
+            0.1,
+            100,
+        );
+        camera.position.set(0, 0.5, 2);
+        return camera;
+    }
+
+    function createRenderer(container: HTMLDivElement) {
+        const { clientWidth, clientHeight } = container;
+        const renderer = new WebGLRenderer({ antialias: true });
+        renderer.setSize(clientWidth, clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        return renderer;
+    }
+
+    function createControls(
+        camera: PerspectiveCamera,
+        renderer: WebGLRenderer,
+    ) {
+        const canvas = renderer.domElement;
+        let startX = 0;
+        let startCameraX = 0;
+
+        const onPointerDown = (e: PointerEvent) => {
+            isDragging = true;
+            startX = e.clientX;
+            startCameraX = userCameraX;
+            canvas.style.cursor = "grabbing";
+        };
+
+        const onPointerMove = (e: PointerEvent) => {
+            if (!isDragging) return;
+
+            const deltaX = (e.clientX - startX) * 0.01;
+            userCameraX = startCameraX - deltaX;
+            lastInteractionTime = Date.now();
+        };
+
+        const onPointerUp = () => {
+            isDragging = false;
+            canvas.style.cursor = "grab";
+        };
+
+        canvas.addEventListener("pointerdown", onPointerDown);
+        canvas.addEventListener("pointermove", onPointerMove);
+        canvas.addEventListener("pointerup", onPointerUp);
+        canvas.addEventListener("pointerleave", onPointerUp);
+        canvas.style.cursor = "grab";
+
+        return () => {
+            canvas.removeEventListener("pointerdown", onPointerDown);
+            canvas.removeEventListener("pointermove", onPointerMove);
+            canvas.removeEventListener("pointerup", onPointerUp);
+            canvas.removeEventListener("pointerleave", onPointerUp);
+        };
+    }
+
+    function createScene() {
+        const scene = new Scene();
+        scene.background = new Color(0x0b0f12);
+        return scene;
+    }
+
+    function createWorldLighting(scene: Scene) {
+        const hemisphere = new HemisphereLight(0xffffff, 0x111122, 0.6);
+        scene.add(hemisphere);
+
+        const directional = new DirectionalLight(0xffffff, 0.8);
+        directional.position.set(5, 5, 5);
+        scene.add(directional);
+    }
+
+    function createGround(scene: Scene) {
+        const groundMat = new MeshStandardMaterial({
+            color: 0x08090a,
+            roughness: 0.9,
+        });
+        const ground = new Mesh(new PlaneGeometry(10, 10), groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -1.0;
+        scene.add(ground);
+    }
+
+    function createFaceTexture(): FaceTexture {
+        const size = FACE_PANEL_WIDTH * FACE_PANEL_HEIGHT * 4;
+        const data = new Uint8Array(size);
+
+        const texture = new DataTexture(
+            data,
+            FACE_PANEL_WIDTH,
+            FACE_PANEL_HEIGHT,
+            RGBAFormat,
+            UnsignedByteType,
+        );
+        texture.magFilter = NearestFilter;
+        texture.minFilter = NearestFilter;
+        texture.needsUpdate = true;
+        texture.flipY = true;
+
+        return { texture, data };
+    }
+
+    function updateTextures() {
+        const totalWidth = faceCanvases.length * FACE_PANEL_WIDTH;
+
+        for (let i = 0; i < faceCanvases.length; i += 1) {
+            const { texture, data } = faceCanvases[i];
+
+            let p = 0;
+            for (let y = 0; y < FACE_PANEL_HEIGHT; y++) {
+                for (let x = 0; x < FACE_PANEL_WIDTH; x++) {
+                    const idx = y * totalWidth + (x + i * FACE_PANEL_WIDTH);
+                    const pixel = frame.pixels[idx];
+
+                    if (pixel) {
+                        const [r, g, b] = pixel;
+                        data[p++] = r;
+                        data[p++] = g;
+                        data[p++] = b;
+                        data[p++] = 255;
+                    } else {
+                        // Default to black if pixel is missing
+                        data[p++] = 0;
+                        data[p++] = 0;
+                        data[p++] = 0;
+                        data[p++] = 255;
+                    }
+                }
+            }
+
+            texture.needsUpdate = true;
+        }
+    }
+
+    function createHelmet(faceCanvases: FaceTexture[]): Group {
+        const trimMat = new MeshStandardMaterial({
+            color: 0x9fb8c8,
+            metalness: 0.9,
+            roughness: 0.2,
+        });
+
+        const root = new Group();
+        const panelWidth = FACE_PANEL_WIDTH * 0.01;
+        const panelHeight = FACE_PANEL_HEIGHT * 0.01;
+        const gap = 0.2;
+
+        for (let i = 0; i < faceCanvases.length; i++) {
+            const faceCanvas = faceCanvases[i];
+
+            const side = i === 0 ? -1 : 1;
+
+            const plane = new PlaneGeometry(panelWidth, panelHeight);
+            plane.translate(0, 0, 0.02);
+
+            const material = new MeshBasicMaterial({
+                map: faceCanvas.texture,
+                side: DoubleSide,
+            });
+            const mesh = new Mesh(plane, material);
+            mesh.position.set(side * gap, 0.5, 0.65);
+            mesh.rotation.y = side * 1;
+            mesh.rotation.x = 0.45;
+            mesh.rotation.z = 0;
+
+            const bezel = new BoxGeometry(
+                panelWidth + 0.04,
+                panelHeight + 0.04,
+                0.02,
+            );
+            const bezelMesh = new Mesh(bezel, trimMat);
+            bezelMesh.position.copy(mesh.position);
+            bezelMesh.rotation.copy(mesh.rotation);
+            bezelMesh.position.z -= 0.005;
+
+            root.add(mesh);
+            root.add(bezelMesh);
+        }
+
+        return root;
+    }
+
+    onMount(() => {
+        if (!container) return;
+
+        const camera = createCamera(container);
+        const renderer = createRenderer(container);
+        const cleanupControls = createControls(camera, renderer);
+        const scene = createScene();
+        createWorldLighting(scene);
+        createGround(scene);
+
+        const helmet = createHelmet(faceCanvases);
+        scene.add(helmet);
+
+        container.appendChild(renderer.domElement);
+
+        let animationId: number | undefined;
+
+        const animate = () => {
+            animationId = requestAnimationFrame(animate);
+
+            // Resume auto animation 2 seconds after last interaction
+            const timeSinceInteraction = Date.now() - lastInteractionTime;
+            const shouldAutoAnimate = timeSinceInteraction > 2000;
+
+            let angle = 0;
+
+            if (shouldAutoAnimate) {
+                // Slowly move camera left and right in an arc
+                const time = Date.now() * 0.0005;
+                angle = Math.sin(time) * 0.6; // Angle in radians
+                const radius = 1.5;
+                camera.position.x = Math.sin(angle) * radius;
+                camera.position.z = Math.cos(angle) * radius;
+
+                // Rotate the helmet to face the camera
+                helmet.rotation.y = -angle;
+            } else {
+                // Use user-controlled position
+                camera.position.x = userCameraX;
+                camera.position.z = 1.5;
+
+                // Calculate angle from user position
+                angle = Math.atan2(userCameraX, 1.5);
+                helmet.rotation.y = -angle;
+            }
+
+            // Adjust look-at target to center the visible panel
+            const targetX = Math.sin(helmet.rotation.y) * 1.5;
+            camera.lookAt(targetX, 0.5, 0);
+
+            // Only update textures if needed, inside the animation loop
+            if (needsTextureUpdate) {
+                updateTextures();
+                needsTextureUpdate = false;
+            }
+
+            renderer.render(scene, camera);
+        };
+
+        const onWindowResize = () => {
+            if (!container) return;
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        };
+
+        window.addEventListener("resize", onWindowResize);
+
+        animate();
+
+        return () => {
+            if (animationId) cancelAnimationFrame(animationId);
+            window.removeEventListener("resize", onWindowResize);
+            cleanupControls();
+            renderer.dispose();
+        };
+    });
+</script>
+
+<div class="view">
+    <div bind:this={container} class="container"></div>
+</div>
+
+<style>
+    .view {
+        display: flex;
+        flex-flow: column;
+        gap: 1rem;
+        width: 100%;
+        height: 100%;
+    }
+
+    .container {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+</style>

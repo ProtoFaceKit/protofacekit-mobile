@@ -7,6 +7,11 @@ export enum ExpressionType {
     TALKING = 1,
 }
 
+export const EXPRESSION_TYPE_NAME = {
+    [ExpressionType.IDLE]: "Idle",
+    [ExpressionType.TALKING]: "Talking",
+};
+
 export interface FaceExpression {
     frames: FaceFrame[];
 }
