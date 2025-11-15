@@ -123,7 +123,7 @@
     .scan-again {
         display: block;
         width: 100%;
-        margin-top: 1rem;
+        margin: 1rem 0;
         background-color: #222;
         color: #fff;
         font-weight: 500;
