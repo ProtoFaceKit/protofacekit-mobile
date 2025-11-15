@@ -172,19 +172,11 @@
                     const idx = y * totalWidth + (x + i * FACE_PANEL_WIDTH);
                     const pixel = frame.pixels[idx];
 
-                    if (pixel) {
-                        const [r, g, b] = pixel;
-                        data[p++] = r;
-                        data[p++] = g;
-                        data[p++] = b;
-                        data[p++] = 255;
-                    } else {
-                        // Default to black if pixel is missing
-                        data[p++] = 0;
-                        data[p++] = 0;
-                        data[p++] = 0;
-                        data[p++] = 255;
-                    }
+                    const [r, g, b] = pixel;
+                    data[p++] = r;
+                    data[p++] = g;
+                    data[p++] = b;
+                    data[p++] = 255;
                 }
             }
 

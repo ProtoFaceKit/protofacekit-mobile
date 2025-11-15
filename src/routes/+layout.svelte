@@ -17,12 +17,6 @@
 
     let onDisconnectHandler: VoidFunction = () => {};
 
-    deviceContext.set({
-        get device() {
-            return connected!;
-        },
-    });
-
     async function onAttemptConnect(device: BleDevice) {
         if (connecting !== undefined) return;
 
@@ -53,6 +47,13 @@
         connected = undefined;
         disconnect().then(onDisconnectHandler);
     }
+
+    deviceContext.set({
+        get device() {
+            return connected!;
+        },
+        disconnect: onDisconnect,
+    });
 </script>
 
 <PermissionGuard>
