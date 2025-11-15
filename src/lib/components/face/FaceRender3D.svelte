@@ -34,6 +34,7 @@
 
     const FACE_PANEL_WIDTH = 64;
     const FACE_PANEL_HEIGHT = 32;
+    const MAX_CAMERA_ANGLE = 0.5;
 
     let container: HTMLDivElement | undefined;
     let needsTextureUpdate = false;
@@ -92,7 +93,13 @@
             if (!isDragging) return;
 
             const deltaX = (e.clientX - startX) * 0.01;
-            userCameraX = startCameraX - deltaX;
+            const newCameraX = startCameraX - deltaX;
+
+            // Clamp the camera position based on max angle
+            const radius = 1.5;
+            const maxX = Math.sin(MAX_CAMERA_ANGLE) * radius;
+            userCameraX = Math.max(-maxX, Math.min(maxX, newCameraX));
+
             lastInteractionTime = Date.now();
         };
 
@@ -101,17 +108,57 @@
             canvas.style.cursor = "grab";
         };
 
+        // Touch event handlers
+        const onTouchStart = (e: TouchEvent) => {
+            if (e.touches.length === 1) {
+                e.preventDefault();
+                isDragging = true;
+                startX = e.touches[0].clientX;
+                startCameraX = userCameraX;
+            }
+        };
+
+        const onTouchMove = (e: TouchEvent) => {
+            if (!isDragging || e.touches.length !== 1) return;
+
+            e.preventDefault();
+            const deltaX = (e.touches[0].clientX - startX) * 0.01;
+            const newCameraX = startCameraX - deltaX;
+
+            // Clamp the camera position based on max angle
+            const radius = 1.5;
+            const maxX = Math.sin(MAX_CAMERA_ANGLE) * radius;
+            userCameraX = Math.max(-maxX, Math.min(maxX, newCameraX));
+
+            lastInteractionTime = Date.now();
+        };
+
+        const onTouchEnd = (e: TouchEvent) => {
+            e.preventDefault();
+            isDragging = false;
+        };
+
         canvas.addEventListener("pointerdown", onPointerDown);
         canvas.addEventListener("pointermove", onPointerMove);
         canvas.addEventListener("pointerup", onPointerUp);
         canvas.addEventListener("pointerleave", onPointerUp);
+        canvas.addEventListener("touchstart", onTouchStart, { passive: false });
+        canvas.addEventListener("touchmove", onTouchMove, { passive: false });
+        canvas.addEventListener("touchend", onTouchEnd, { passive: false });
+        canvas.addEventListener("touchcancel", onTouchEnd, { passive: false });
+
         canvas.style.cursor = "grab";
+        canvas.style.touchAction = "none";
 
         return () => {
             canvas.removeEventListener("pointerdown", onPointerDown);
             canvas.removeEventListener("pointermove", onPointerMove);
             canvas.removeEventListener("pointerup", onPointerUp);
             canvas.removeEventListener("pointerleave", onPointerUp);
+            canvas.removeEventListener("touchstart", onTouchStart);
+            canvas.removeEventListener("touchmove", onTouchMove);
+            canvas.removeEventListener("touchend", onTouchEnd);
+            canvas.removeEventListener("touchcancel", onTouchEnd);
         };
     }
 
@@ -260,7 +307,7 @@
             if (shouldAutoAnimate) {
                 // Slowly move camera left and right in an arc
                 const time = Date.now() * 0.0005;
-                angle = Math.sin(time) * 0.6; // Angle in radians
+                angle = Math.sin(time) * MAX_CAMERA_ANGLE;
                 const radius = 1.5;
                 camera.position.x = Math.sin(angle) * radius;
                 camera.position.z = Math.cos(angle) * radius;
