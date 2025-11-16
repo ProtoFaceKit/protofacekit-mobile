@@ -14,6 +14,7 @@
         type FaceExpression,
         type FaceFrame,
     } from "$lib/types/data";
+    import { deepClone } from "$lib/utils/clone";
     import { sleep } from "$lib/utils/timing";
     import { watch } from "runed";
 
@@ -27,7 +28,7 @@
     watch(
         () => storedFace,
         (storedFace) => {
-            face = createFaceCopy(storedFace.face);
+            face = deepClone(storedFace.face);
         },
     );
 
@@ -39,28 +40,6 @@
             face = value;
         },
     });
-
-    /**
-     * Performs a deep copy of a face
-     *
-     * @param face
-     */
-    function createFaceCopy(face: Face): Face {
-        const expressions: Partial<Record<ExpressionType, FaceExpression>> = {};
-
-        for (const [key, value] of Object.entries(face.expressions)) {
-            expressions[parseInt(key) as ExpressionType] = {
-                frames: value.frames.map((frame) => ({
-                    pixels: frame.pixels.map(([r, g, b]) => [r, g, b]),
-                    duration: frame.duration,
-                })),
-            };
-        }
-
-        return {
-            expressions,
-        };
-    }
 
     let expressionType = $state(ExpressionType.IDLE);
     const expression = $derived(face.expressions[expressionType]);
@@ -185,6 +164,24 @@
             },
         };
     }
+    function onDuplicateFrame(index: number) {
+        const currentFrames = face.expressions[expressionType]?.frames ?? [];
+        const existingFrame = currentFrames[index];
+        if (!existingFrame) return;
+
+        const newFrames = [...currentFrames];
+        newFrames.splice(index, 0, deepClone(existingFrame));
+
+        face = {
+            ...face,
+            expressions: {
+                ...face.expressions,
+                [expressionType]: {
+                    frames: newFrames,
+                },
+            },
+        };
+    }
 
     function onChangePixels(index: number, pixels: [number, number, number][]) {
         const currentFrames = face.expressions[expressionType]?.frames ?? [];
@@ -258,19 +255,28 @@
         />
     </div>
 
-    <div class="editor" class:editor--fullscreen={editorFullscreen}>
-        {#if frame}
-            <FrameEditor
-                {frame}
-                onDelete={() => onDeleteFrame(frameIndex)}
-                onToggleFullscreen={() =>
-                    (editorFullscreen = !editorFullscreen)}
-                onChangePixels={(pixels) => onChangePixels(frameIndex, pixels)}
-            />
-        {:else}
-            Select a frame
-        {/if}
-    </div>
+    {#if running}
+        <p>Pause animation to edit frame</p>
+    {:else}
+        <div
+            class="editor"
+            class:editor--fullscreen={editorFullscreen && frame}
+        >
+            {#if frame}
+                <FrameEditor
+                    {frame}
+                    onDelete={() => onDeleteFrame(frameIndex)}
+                    onDuplicate={() => onDuplicateFrame(frameIndex)}
+                    onToggleFullscreen={() =>
+                        (editorFullscreen = !editorFullscreen)}
+                    onChangePixels={(pixels) =>
+                        onChangePixels(frameIndex, pixels)}
+                />
+            {:else}
+                Select a frame
+            {/if}
+        </div>
+    {/if}
 </div>
 
 <style>
@@ -358,5 +364,6 @@
         top: 0;
         width: 100%;
         height: 100%;
+        z-index: 999;
     }
 </style>

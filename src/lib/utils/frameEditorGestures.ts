@@ -1,4 +1,4 @@
-import { FACE_PANEL_TOTAL_WIDTH } from "$lib/constants";
+import { FACE_PANEL_HEIGHT, FACE_PANEL_TOTAL_WIDTH } from "$lib/constants";
 import { distance, midpoint, type Point } from "$lib/types/math";
 
 interface CreateFrameEditorGestures {
@@ -39,7 +39,7 @@ export function createFrameEditorGestures({
 
     let currentScale =
         // Fit the scale to the container scale
-        wrapperContainer.clientWidth / (FACE_PANEL_TOTAL_WIDTH * ledScale);
+        wrapperContainer.clientWidth / (FACE_PANEL_TOTAL_WIDTH * ledScale + 20);
     let baseScale = 1;
 
     let translateX = 0;
@@ -49,17 +49,78 @@ export function createFrameEditorGestures({
 
     function applyTransform() {
         if (!panningContainer) return;
+
+        const containerWidth = wrapperContainer.clientWidth;
+        const containerHeight = wrapperContainer.clientHeight;
+
+        currentScale = Math.min(Math.max(currentScale, 0.2), 4);
+
+        const contentWidth =
+            (FACE_PANEL_TOTAL_WIDTH * ledScale + 20) * currentScale;
+        const contentHeight = FACE_PANEL_HEIGHT * ledScale * currentScale;
+
+        const visibleContentWidth = contentWidth * 0.4;
+        const visibleContentHeight = contentHeight * 0.4;
+
+        const minX = Math.min(
+            -(contentWidth - visibleContentWidth),
+            containerWidth - visibleContentWidth,
+        );
+        const minY = Math.min(
+            -(contentHeight - visibleContentHeight),
+            containerHeight - visibleContentHeight,
+        );
+
+        const maxX = Math.max(0, containerWidth - visibleContentWidth);
+        const maxY = Math.max(0, containerHeight - visibleContentHeight);
+
+        translateX = Math.min(Math.max(translateX, minX), maxX);
+        translateY = Math.min(Math.max(translateY, minY), maxY);
+
         panningContainer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
     }
 
-    function screenToCanvas(x: number, y: number, canvas: HTMLCanvasElement) {
-        const rect = canvas.getBoundingClientRect();
+    function screenToCanvas(
+        clientX: number,
+        clientY: number,
+        canvas: HTMLCanvasElement,
+    ) {
+        const rect = canvas.getBoundingClientRect(); // Get canvas position & size in screen space
 
-        // Convert screen to unscaled container coordinates
-        const containerX = (x - translateX - rect.left) / currentScale;
-        const containerY = (y - translateY - rect.top) / currentScale;
+        // Calculate the scale between canvas's internal resolution and its displayed size
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
 
-        return { x: containerX, y: containerY };
+        // Convert screen coordinates to canvas coordinates
+        const x = (clientX - rect.left) * scaleX;
+        const y = (clientY - rect.top) * scaleY;
+
+        return { x, y };
+    }
+
+    function onMovePaint(
+        canvas: HTMLCanvasElement,
+        clientX: number,
+        clientY: number,
+    ) {
+        const point = screenToCanvas(clientX, clientY, canvas);
+        const col = Math.floor(point.x / ledScale);
+        const row = Math.floor(point.y / ledScale);
+
+        lastPoint = point;
+
+        // Ignore painting the same cell twice
+        if (
+            lastPaintedCell &&
+            lastPaintedCell.canvas === canvas &&
+            lastPaintedCell.col === col &&
+            lastPaintedCell.row === row
+        ) {
+            return;
+        }
+
+        lastPaintedCell = { canvas, col, row };
+        paint(canvas, row, col);
     }
 
     /** Pointer and wheel events (Desktop) */
@@ -69,7 +130,6 @@ export function createFrameEditorGestures({
 
         const zoomIntensity = 0.1;
         currentScale += (event.deltaY < 0 ? 1 : -1) * zoomIntensity;
-        currentScale = Math.min(Math.max(currentScale, 0.2), 4);
 
         applyTransform();
     }
@@ -79,6 +139,7 @@ export function createFrameEditorGestures({
 
         if (event.target instanceof HTMLCanvasElement) {
             gesture = "paint";
+            onMovePaint(event.target, event.clientX, event.clientY);
         } else {
             gesture = "pan";
             lastPoint = { x: event.clientX, y: event.clientY };
@@ -148,39 +209,17 @@ export function createFrameEditorGestures({
             event.touches.length === 1 &&
             event.target instanceof HTMLCanvasElement
         ) {
+            const canvas = event.target;
+
             pendingPaintTimeout = setTimeout(() => {
                 if (event.touches.length === 1) {
                     gesture = "paint";
                     const touch = event.touches[0];
                     lastPoint = { x: touch.clientX, y: touch.clientY };
+                    onMovePaint(canvas, touch.clientX, touch.clientY);
                 }
             }, thresholds.draw);
         }
-    }
-
-    function onMovePaint(
-        canvas: HTMLCanvasElement,
-        clientX: number,
-        clientY: number,
-    ) {
-        const point = screenToCanvas(clientX, clientY, canvas);
-        const col = Math.floor(point.x / ledScale);
-        const row = Math.floor(point.y / ledScale);
-
-        lastPoint = point;
-
-        // Ignore painting the same cell twice
-        if (
-            lastPaintedCell &&
-            lastPaintedCell.canvas === canvas &&
-            lastPaintedCell.col === col &&
-            lastPaintedCell.row === row
-        ) {
-            return;
-        }
-
-        lastPaintedCell = { canvas, col, row };
-        paint(canvas, row, col);
     }
 
     function onTouchMove(event: TouchEvent) {
@@ -246,6 +285,13 @@ export function createFrameEditorGestures({
     // Apply initial transform
     applyTransform();
 
+    // Ensure transform is updated on resize of the wrapper
+    const resizeObserver = new ResizeObserver(() => {
+        applyTransform();
+    });
+
+    resizeObserver.observe(wrapperContainer);
+
     // Add event listeners
     wrapperContainer.addEventListener("wheel", onWheel, { passive: false });
     wrapperContainer.addEventListener("pointerdown", onPointerDown);
@@ -262,6 +308,8 @@ export function createFrameEditorGestures({
     wrapperContainer.addEventListener("touchend", onTouchEnd);
 
     return () => {
+        resizeObserver.disconnect();
+
         wrapperContainer.removeEventListener("wheel", onWheel);
         wrapperContainer.removeEventListener("pointerdown", onPointerDown);
         wrapperContainer.removeEventListener("pointermove", onPointerMove);

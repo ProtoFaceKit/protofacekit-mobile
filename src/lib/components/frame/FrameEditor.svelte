@@ -3,7 +3,7 @@
     import SolarPaintRollerBoldDuotone from "~icons/solar/paint-roller-bold-duotone";
     import SolarEraserBoldDuotone from "~icons/solar/eraser-bold-duotone";
     import SolarMaximizeBold from "~icons/solar/maximize-bold";
-
+    import SolarCopyBoldDuotone from "~icons/solar/copy-bold-duotone";
     import SolarTrashBin2BoldDuotone from "~icons/solar/trash-bin-2-bold-duotone";
     import type { RgbColor } from "$lib/types/color";
     import {
@@ -24,6 +24,7 @@
         frame: FaceFrame;
 
         onDelete: VoidFunction;
+        onDuplicate: VoidFunction;
         onToggleFullscreen: VoidFunction;
 
         onChangePixels: (pixels: [number, number, number][]) => void;
@@ -37,6 +38,7 @@
     const {
         frame,
         onChangePixels: setFramePixelsRoot,
+        onDuplicate,
         onDelete,
         onToggleFullscreen,
     }: Props = $props();
@@ -263,6 +265,9 @@
         <button onclick={onToggleFullscreen}>
             <SolarMaximizeBold />
         </button>
+        <button onclick={onDuplicate}>
+            <SolarCopyBoldDuotone />
+        </button>
     </div>
 
     <div class="canvas" bind:this={facesContainer}>
@@ -306,6 +311,8 @@
 
         transform-origin: 0 0;
         touch-action: none;
+
+        background: blue;
     }
 
     .actions {
