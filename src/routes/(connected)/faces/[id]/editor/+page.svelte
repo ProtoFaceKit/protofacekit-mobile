@@ -2,7 +2,10 @@
     import FaceRender3D from "$lib/components/face/FaceRender3D.svelte";
     import FrameEditor from "$lib/components/frame/FrameEditor.svelte";
     import FrameTimeline from "$lib/components/frame/FrameTimeline.svelte";
-    import { FACE_PANEL_TOTAL_WIDTH } from "$lib/constants";
+    import {
+        FACE_PANEL_TOTAL_PIXELS,
+        FACE_PANEL_TOTAL_WIDTH,
+    } from "$lib/constants";
     import { editorContext } from "$lib/context/editorContext.svelte";
     import { faceContext } from "$lib/context/faceContext.svelte";
     import {
@@ -60,7 +63,6 @@
     }
 
     let expressionType = $state(ExpressionType.IDLE);
-
     const expression = $derived(face.expressions[expressionType]);
 
     let frameIndex = $state(0);
@@ -124,7 +126,7 @@
 
     function onAddFrame() {
         const defaultPixelData: [number, number, number][] = [];
-        defaultPixelData.fill([0, 0, 0], 0, FACE_PANEL_TOTAL_WIDTH);
+        defaultPixelData.fill([0, 0, 0], 0, FACE_PANEL_TOTAL_PIXELS);
         const currentFrames = face.expressions[expressionType]?.frames ?? [];
         const newFrame: FaceFrame = { duration: 100, pixels: defaultPixelData };
 
@@ -176,6 +178,28 @@
                 [expressionType]: {
                     frames: currentFrames.filter((frame, otherIndex) => {
                         return otherIndex !== index;
+                    }),
+                },
+            },
+        };
+    }
+
+    function onChangePixels(index: number, pixels: [number, number, number][]) {
+        const currentFrames = face.expressions[expressionType]?.frames ?? [];
+        face = {
+            ...face,
+            expressions: {
+                ...face.expressions,
+                [expressionType]: {
+                    frames: currentFrames.map((frame, otherIndex) => {
+                        if (otherIndex === index) {
+                            return {
+                                ...frame,
+                                pixels,
+                            };
+                        } else {
+                            return frame;
+                        }
                     }),
                 },
             },
@@ -239,6 +263,7 @@
                 onDelete={() => onDeleteFrame(frameIndex)}
                 onToggleFullscreen={() =>
                     (editorFullscreen = !editorFullscreen)}
+                onChangePixels={(pixels) => onChangePixels(frameIndex, pixels)}
             />
         {:else}
             Select a frame
