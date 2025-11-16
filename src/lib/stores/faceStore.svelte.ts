@@ -30,8 +30,6 @@ export interface FaceStore {
     removeFace: (id: string) => Promise<void>;
 }
 
-export const faceStore = createFaceStore();
-
 export function createFaceStore(): FaceStore {
     let loading = $state(false);
     let error: unknown | undefined = $state(undefined);

@@ -6,12 +6,15 @@
     import DeviceConnectError from "$lib/components/DeviceConnectError.svelte";
     import PermissionGuard from "$lib/components/PermissionGuard.svelte";
     import { deviceContext } from "$lib/context/deviceContext.svelte";
-    import { faceStore } from "$lib/stores/faceStore.svelte";
+    import { createFaceStore } from "$lib/stores/faceStore.svelte";
     import { faceStoreContext } from "$lib/context/faceStoreContext.svelte";
-    import { connectionStore } from "$lib/stores/connectionStore.svelte";
+    import { createConnectionStore } from "$lib/stores/connectionStore.svelte";
+    import AppToaster from "$lib/components/AppToaster.svelte";
 
     const { children }: LayoutProps = $props();
 
+    const connectionStore = createConnectionStore();
+    const faceStore = createFaceStore();
     faceStoreContext.set(faceStore);
 
     deviceContext.set({
@@ -35,3 +38,5 @@
         <DeviceDiscovery onAttemptConnect={connectionStore.connect} />
     {/if}
 </PermissionGuard>
+
+<AppToaster />

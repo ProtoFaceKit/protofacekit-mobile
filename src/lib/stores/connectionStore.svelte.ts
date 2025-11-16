@@ -11,8 +11,6 @@ export interface ConnectionStore {
     reset: VoidFunction;
 }
 
-export const connectionStore = createConnectionStore();
-
 export function createConnectionStore(): ConnectionStore {
     let connecting: BleDevice | undefined = $state();
     let connected: BleDevice | undefined = $state();

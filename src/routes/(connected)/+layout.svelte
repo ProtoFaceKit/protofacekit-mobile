@@ -9,29 +9,38 @@
     const { children }: LayoutProps = $props();
 </script>
 
-<div class="header">
-    <div class="header__text">
-        <img src={icon} alt="Logo" height={38} />
-        <div class="device">
-            <h1 class="device__name">{device.name}</h1>
-            <p class="device__address">{device.address}</p>
+<div class="view">
+    <div class="header">
+        <div class="header__text">
+            <img src={icon} alt="Logo" height={38} />
+            <div class="device">
+                <h1 class="device__name">{device.name}</h1>
+                <p class="device__address">{device.address}</p>
+            </div>
         </div>
+        <button
+            class="btn"
+            onclick={() => {
+                context.disconnect();
+            }}
+        >
+            Disconnect
+        </button>
     </div>
-    <button
-        class="btn"
-        onclick={() => {
-            context.disconnect();
-        }}
-    >
-        Disconnect
-    </button>
-</div>
 
-<div class="container">
-    {@render children?.()}
+    <div class="container">
+        {@render children?.()}
+    </div>
 </div>
 
 <style>
+    .view {
+        height: 100%;
+        overflow: hidden;
+        display: flex;
+        flex-flow: column;
+    }
+
     .header {
         display: flex;
         gap: 1rem;
@@ -59,5 +68,7 @@
 
     .container {
         padding: 1rem;
+        flex: auto;
+        overflow: auto;
     }
 </style>
