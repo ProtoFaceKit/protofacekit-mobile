@@ -236,28 +236,14 @@
         });
 
         const container = panningContainer;
-        const wrappers: HTMLDivElement[] = [];
 
         for (const { canvas } of faceCanvases) {
-            canvas.classList.add("face-canvas");
-            const wrapper = document.createElement("div");
-            wrapper.classList.add("canvas-container");
-            wrapper.appendChild(canvas);
-            container.appendChild(wrapper);
-            wrappers.push(wrapper);
-
-            wrapper.style.display = "block";
-            wrapper.style.width = `${FACE_PANEL_WIDTH * LED_SCALE}px`;
-            wrapper.style.height = `${FACE_PANEL_HEIGHT * LED_SCALE}px`;
+            container.appendChild(canvas);
         }
 
         return () => {
             for (const { canvas } of faceCanvases) {
-                canvas.classList.remove("face-canvas");
-            }
-
-            for (const wrapper of wrappers) {
-                container.removeChild(wrapper);
+                container.removeChild(canvas);
             }
 
             cleanupGestures();
