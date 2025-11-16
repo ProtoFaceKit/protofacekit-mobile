@@ -1,16 +1,15 @@
 <script lang="ts">
     import { EXPRESSION_TYPE_NAME, ExpressionType } from "$lib/types/data";
-    import type { StoredFace } from "$lib/types/face";
+    import type { StoredFace } from "$lib/types/faceStore";
     import FacePreview from "./FacePreview.svelte";
 
     export interface Props {
         item: StoredFace;
 
-        onEdit?: VoidFunction;
         onShow: VoidFunction;
     }
 
-    const { item, onShow, onEdit }: Props = $props();
+    const { item, onShow }: Props = $props();
 
     const expressionTypes = $derived(
         Object.keys(item.face.expressions).map(
@@ -43,8 +42,12 @@
         </div>
 
         <div class="actions">
-            <button class="action" onclick={onEdit}>Edit</button>
-            <button class="action" onclick={onShow}>Show</button>
+            <a class="btn btn--span btn--surface" href="faces/{item.id}">
+                Edit
+            </a>
+            <button class="btn btn--span btn--surface" onclick={onShow}>
+                Show
+            </button>
         </div>
     </div>
 </div>
@@ -101,19 +104,6 @@
     .actions {
         display: flex;
         gap: 1rem;
-    }
-
-    .action {
-        display: block;
-        width: 100%;
-        margin-top: 1rem;
-        background-color: #2f2f2f;
-        color: #fff;
-        font-weight: 500;
-        border: none;
-        border-radius: 0.4rem;
-        padding: 0.5em 1em;
-        cursor: pointer;
     }
 
     .preview {

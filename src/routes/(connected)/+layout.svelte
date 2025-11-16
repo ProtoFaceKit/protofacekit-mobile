@@ -2,6 +2,7 @@
     import { deviceContext } from "$lib/context/deviceContext.svelte";
     import icon from "$lib/assets/protofacekit.svg";
     import type { LayoutProps } from "./$types";
+    import { toast } from "svelte-sonner";
 
     const context = deviceContext.get();
     const device = $derived(context.device);
@@ -21,6 +22,7 @@
         <button
             class="btn"
             onclick={() => {
+                toast.loading("Disconnecting...");
                 context.disconnect();
             }}
         >

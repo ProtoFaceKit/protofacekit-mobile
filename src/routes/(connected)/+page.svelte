@@ -3,6 +3,8 @@
     import StoredFaceItem from "$lib/components/face/StoredFaceItem.svelte";
     import { faceStoreContext } from "$lib/context/faceStoreContext.svelte";
     import Loader from "$lib/components/Loader.svelte";
+    import { toast } from "svelte-sonner";
+    import { toastErrorMessage } from "$lib/utils/error";
 
     const faceStore = faceStoreContext.get();
 </script>
@@ -19,7 +21,12 @@
                 <StoredFaceItem
                     item={face}
                     onShow={() => {
-                        writeFace(face.face);
+                        const writePromise = writeFace(face.face);
+                        toast.promise(writePromise, {
+                            loading: "Sending face...",
+                            success: "Sent face to controller!",
+                            error: toastErrorMessage("Failed to send face"),
+                        });
                     }}
                 />
             {:else}

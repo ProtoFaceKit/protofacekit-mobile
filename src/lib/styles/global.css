@@ -72,6 +72,10 @@ a:hover {
     padding: 0.75em 1em;
 }
 
+.btn--surface {
+    background-color: #2f2f2f;
+}
+
 .btn--primary {
     background-color: #622d2d;
     color: #fff;
