@@ -43,7 +43,11 @@ a:hover {
 }
 
 .btn {
-    display: block;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+
     background-color: #222;
     color: #fff;
     font-weight: 500;

@@ -3,7 +3,6 @@
     import { FACE_PANEL_TOTAL_WIDTH } from "$lib/constants";
     import { ExpressionType, type Face, type FaceFrame } from "$lib/types/data";
     import { copyToClipboard } from "$lib/utils/clipboard";
-    import { connect } from "@mnlphlp/plugin-blec";
     import { onMount } from "svelte";
     import ColorPicker from "svelte-awesome-color-picker";
     import FaceRenderer from "./FaceRenderer.svelte";

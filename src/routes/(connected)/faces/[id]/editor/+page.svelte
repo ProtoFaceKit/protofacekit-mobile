@@ -1,34 +1,58 @@
 <script lang="ts">
+    import { writeFace } from "$lib/ble";
+    import FaceExpressionPreview from "$lib/components/face/FaceExpressionPreview.svelte";
     import FacePreview from "$lib/components/face/FacePreview.svelte";
+    import FaceRender3D from "$lib/components/face/FaceRender3D.svelte";
     import { faceContext } from "$lib/context/faceContext.svelte";
+    import { ExpressionType } from "$lib/types/data";
+    import { toastErrorMessage } from "$lib/utils/error";
+    import { toast } from "svelte-sonner";
     import SolarTrashBin2BoldDuotone from "~icons/solar/trash-bin-2-bold-duotone";
+
     const context = faceContext.get();
-    const face = $derived(context.face);
+    const storedFace = $derived(context.face);
+    const face = $derived(storedFace.face);
+
+    let expressionType = $state(ExpressionType.IDLE);
+
+    const expression = $derived(face.expressions[expressionType]);
 </script>
 
 <div>
     <div class="heading">
         <div class="path">
             <p class="path--segment">Faces /</p>
-            <h1 class="path--name">
-                {face.name}
-            </h1>
+            <h1 class="path--name">{storedFace.name}</h1>
         </div>
 
         <div class="actions">
             <a class="btn" href="/">Back</a>
-            <a class="btn btn--primary" href="/faces/{face.id}/delete">
-                <SolarTrashBin2BoldDuotone />
-            </a>
         </div>
     </div>
 </div>
 
-<div class="preview">
-    <FacePreview face={face.face} />
+<div class="expressions">
+    <button
+        class="btn btn--span btn--large"
+        onclick={() => (expressionType = ExpressionType.IDLE)}
+    >
+        Idle
+    </button>
+    <button
+        class="btn btn--span btn--large"
+        onclick={() => (expressionType = ExpressionType.TALKING)}
+    >
+        Talking
+    </button>
 </div>
 
-<div class="actions"></div>
+<div class="preview">
+    {#if expression}
+        <FaceExpressionPreview {expression} />
+    {:else}
+        <FaceRender3D pixels={[]} />
+    {/if}
+</div>
 
 <style>
     .heading {
@@ -38,11 +62,6 @@
         align-items: center;
         margin-bottom: 1rem;
         overflow: hidden;
-    }
-
-    .preview {
-        height: 192px;
-        background: black;
     }
 
     .path {
@@ -75,5 +94,17 @@
         display: flex;
         gap: 1rem;
         flex-shrink: 0;
+    }
+
+    .preview {
+        height: 192px;
+        background: black;
+        margin-top: 1rem;
+    }
+
+    .expressions {
+        display: flex;
+        gap: 1em;
+        flex-flow: row;
     }
 </style>

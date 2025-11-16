@@ -38,7 +38,7 @@
     <p>Are you sure you want to delete the <b>{face.name}</b> face?</p>
 
     <div class="actions">
-        <a class="btn btn--span btn--large" href="/faces/{face.id}">Back</a>
+        <a class="btn btn--span btn--large" href="/">Back</a>
         <button
             class="btn btn--span btn--large btn--primary"
             disabled={submitting}

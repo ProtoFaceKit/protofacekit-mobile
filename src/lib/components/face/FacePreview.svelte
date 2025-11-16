@@ -1,6 +1,12 @@
 <script lang="ts">
-    import { ExpressionType, type Face, type FaceFrame } from "$lib/types/data";
-    import FaceFrameRenderer from "./FaceFrameRenderer.svelte";
+    import {
+        ExpressionType,
+        type Face,
+        type FaceExpression,
+    } from "$lib/types/data";
+    import { sleep } from "$lib/utils/timing";
+
+    import FaceExpressionPreview from "./FaceExpressionPreview.svelte";
     import FaceRender3D from "./FaceRender3D.svelte";
 
     interface Props {
@@ -11,24 +17,7 @@
 
     const expressions = [ExpressionType.IDLE, ExpressionType.TALKING];
 
-    let frame: FaceFrame | undefined = $state(undefined);
-
-    function sleep(duration: number, abort: AbortController) {
-        return new Promise((resolve, reject) => {
-            let resolved = false;
-
-            const timeoutHandle = setTimeout(() => {
-                resolved = true;
-                resolve(undefined);
-            }, duration);
-
-            abort.signal.addEventListener("abort", () => {
-                if (resolved) return;
-                clearTimeout(timeoutHandle);
-                reject();
-            });
-        });
-    }
+    let expression: FaceExpression | undefined = $state(undefined);
 
     async function animate(face: Face, abort: AbortController) {
         const validExpressions = Object.keys(face.expressions).map(
@@ -43,27 +32,9 @@
         while (!abort.signal.aborted) {
             const currentExpression =
                 face.expressions[validExpressions[expressionIndex]]!;
+            expression = currentExpression;
 
-            console.log(currentExpression);
-
-            let frameIndex = 0;
-
-            if (currentExpression.frames.length > 0) {
-                // Frame change loop
-                while (!abort.signal.aborted) {
-                    const currentFrame = currentExpression.frames[frameIndex];
-                    frame = currentFrame;
-                    await sleep(currentFrame.duration, abort);
-                    frameIndex++;
-
-                    // Moved to the next expression
-                    if (frameIndex === currentExpression.frames.length) {
-                        break;
-                    }
-                }
-            }
-
-            // Sleep before moving to the next frame
+            // Sleep before moving to the next expression
             await sleep(1000, abort);
 
             // Move to the next expression
@@ -88,6 +59,8 @@
     });
 </script>
 
-{#if frame}
-    <FaceRender3D {frame} />
+{#if expression}
+    <FaceExpressionPreview {expression} />
+{:else}
+    <FaceRender3D pixels={[]} />
 {/if}

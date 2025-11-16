@@ -19,10 +19,10 @@
         UnsignedByteType,
         WebGLRenderer,
     } from "three";
-    import type { FaceFrame } from "$lib/types/data";
+    import { watch } from "runed";
 
     type Props = {
-        frame: FaceFrame;
+        pixels: [number, number, number][];
     };
 
     interface FaceTexture {
@@ -30,7 +30,7 @@
         data: Uint8Array;
     }
 
-    const { frame }: Props = $props();
+    const { pixels }: Props = $props();
 
     const FACE_PANEL_WIDTH = 64;
     const FACE_PANEL_HEIGHT = 32;
@@ -49,10 +49,12 @@
     ];
 
     // Only mark for update when frame changes, don't do the heavy work here
-    $effect(() => {
-        frame; // Track frame changes
-        needsTextureUpdate = true;
-    });
+    watch(
+        () => pixels,
+        () => {
+            needsTextureUpdate = true;
+        },
+    );
 
     function createCamera(container: HTMLDivElement) {
         const { clientWidth, clientHeight } = container;
@@ -81,8 +83,11 @@
         const canvas = renderer.domElement;
         let startX = 0;
         let startCameraX = 0;
+        let touchStartY = 0;
+        let hasMovedHorizontally = false;
 
         const onPointerDown = (e: PointerEvent) => {
+            if (e.pointerType === "touch") return;
             isDragging = true;
             startX = e.clientX;
             startCameraX = userCameraX;
@@ -90,7 +95,7 @@
         };
 
         const onPointerMove = (e: PointerEvent) => {
-            if (!isDragging) return;
+            if (!isDragging || e.pointerType === "touch") return;
 
             const deltaX = (e.clientX - startX) * 0.01;
             const newCameraX = startCameraX - deltaX;
@@ -103,7 +108,8 @@
             lastInteractionTime = Date.now();
         };
 
-        const onPointerUp = () => {
+        const onPointerUp = (e: PointerEvent) => {
+            if (e.pointerType === "touch") return;
             isDragging = false;
             canvas.style.cursor = "grab";
         };
@@ -115,40 +121,56 @@
                 isDragging = true;
                 startX = e.touches[0].clientX;
                 startCameraX = userCameraX;
+                touchStartY = e.touches[0].clientY;
+                hasMovedHorizontally = false;
             }
         };
 
         const onTouchMove = (e: TouchEvent) => {
             if (!isDragging || e.touches.length !== 1) return;
 
-            e.preventDefault();
-            const deltaX = (e.touches[0].clientX - startX) * 0.01;
-            const newCameraX = startCameraX - deltaX;
+            const deltaX = e.touches[0].clientX - startX;
+            const deltaY = e.touches[0].clientY - touchStartY;
 
-            // Clamp the camera position based on max angle
-            const radius = 1.5;
-            const maxX = Math.sin(MAX_CAMERA_ANGLE) * radius;
-            userCameraX = Math.max(-maxX, Math.min(maxX, newCameraX));
+            // Only prevent default if horizontal movement is greater than vertical
+            if (
+                !hasMovedHorizontally &&
+                Math.abs(deltaX) > Math.abs(deltaY) &&
+                Math.abs(deltaX) > 10
+            ) {
+                hasMovedHorizontally = true;
+            }
 
-            lastInteractionTime = Date.now();
+            if (hasMovedHorizontally) {
+                e.preventDefault();
+                const adjustedDeltaX = deltaX * 0.01;
+                const newCameraX = startCameraX - adjustedDeltaX;
+
+                // Clamp the camera position based on max angle
+                const radius = 1.5;
+                const maxX = Math.sin(MAX_CAMERA_ANGLE) * radius;
+                userCameraX = Math.max(-maxX, Math.min(maxX, newCameraX));
+
+                lastInteractionTime = Date.now();
+            }
         };
 
         const onTouchEnd = (e: TouchEvent) => {
-            e.preventDefault();
             isDragging = false;
+            hasMovedHorizontally = false;
         };
 
         canvas.addEventListener("pointerdown", onPointerDown);
         canvas.addEventListener("pointermove", onPointerMove);
         canvas.addEventListener("pointerup", onPointerUp);
         canvas.addEventListener("pointerleave", onPointerUp);
-        canvas.addEventListener("touchstart", onTouchStart, { passive: false });
+        canvas.addEventListener("touchstart", onTouchStart, { passive: true });
         canvas.addEventListener("touchmove", onTouchMove, { passive: false });
-        canvas.addEventListener("touchend", onTouchEnd, { passive: false });
-        canvas.addEventListener("touchcancel", onTouchEnd, { passive: false });
+        canvas.addEventListener("touchend", onTouchEnd, { passive: true });
+        canvas.addEventListener("touchcancel", onTouchEnd, { passive: true });
 
         canvas.style.cursor = "grab";
-        canvas.style.touchAction = "none";
+        // canvas.style.touchAction = "none";
 
         return () => {
             canvas.removeEventListener("pointerdown", onPointerDown);
@@ -217,13 +239,20 @@
             for (let y = 0; y < FACE_PANEL_HEIGHT; y++) {
                 for (let x = 0; x < FACE_PANEL_WIDTH; x++) {
                     const idx = y * totalWidth + (x + i * FACE_PANEL_WIDTH);
-                    const pixel = frame.pixels[idx];
+                    const pixel = pixels[idx];
 
-                    const [r, g, b] = pixel;
-                    data[p++] = r;
-                    data[p++] = g;
-                    data[p++] = b;
-                    data[p++] = 255;
+                    if (pixel) {
+                        const [r, g, b] = pixel;
+                        data[p++] = r;
+                        data[p++] = g;
+                        data[p++] = b;
+                        data[p++] = 255;
+                    } else {
+                        data[p++] = 0;
+                        data[p++] = 0;
+                        data[p++] = 0;
+                        data[p++] = 255;
+                    }
                 }
             }
 

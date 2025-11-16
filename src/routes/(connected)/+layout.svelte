@@ -13,7 +13,10 @@
 <div class="view">
     <div class="header">
         <div class="header__text">
-            <img src={icon} alt="Logo" height={38} />
+            <a href="/">
+                <img src={icon} alt="Logo" height={38} />
+            </a>
+
             <div class="device">
                 <h1 class="device__name">{device.name}</h1>
                 <p class="device__address">{device.address}</p>

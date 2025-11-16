@@ -2,6 +2,7 @@
     import { EXPRESSION_TYPE_NAME, ExpressionType } from "$lib/types/data";
     import type { StoredFace } from "$lib/types/faceStore";
     import FacePreview from "./FacePreview.svelte";
+    import SolarTrashBin2BoldDuotone from "~icons/solar/trash-bin-2-bold-duotone";
 
     export interface Props {
         item: StoredFace;
@@ -10,12 +11,6 @@
     }
 
     const { item, onShow }: Props = $props();
-
-    const expressionTypes = $derived(
-        Object.keys(item.face.expressions).map(
-            (value) => parseInt(value) as ExpressionType,
-        ),
-    );
 </script>
 
 <div class="item">
@@ -28,9 +23,9 @@
             <p class="item--name">{item.name}</p>
 
             <div class="expressions">
-                {#each expressionTypes as expression (expression)}
+                {#each [ExpressionType.IDLE, ExpressionType.TALKING] as expression (expression)}
                     {@const totalFrames =
-                        item.face.expressions[expression]!.frames.length}
+                        item.face.expressions[expression]?.frames?.length ?? 0}
                     <p class="expression">
                         {EXPRESSION_TYPE_NAME[expression]}
                         <span class="expression__frames">
@@ -42,12 +37,13 @@
         </div>
 
         <div class="actions">
-            <a class="btn btn--span btn--surface" href="faces/{item.id}">
-                Edit
+            <a class="btn btn--surface" href="faces/{item.id}/editor"> Edit </a>
+
+            <button class="btn btn--surface" onclick={onShow}> Show </button>
+
+            <a class="btn btn--primary" href="/faces/{item.id}/delete">
+                <SolarTrashBin2BoldDuotone />
             </a>
-            <button class="btn btn--span btn--surface" onclick={onShow}>
-                Show
-            </button>
         </div>
     </div>
 </div>
@@ -104,6 +100,12 @@
     .actions {
         display: flex;
         gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .actions > .btn {
+        flex-shrink: 0;
+        flex: auto;
     }
 
     .preview {

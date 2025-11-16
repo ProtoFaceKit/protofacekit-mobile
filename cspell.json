@@ -3,6 +3,7 @@
     "raycaster",
     "metalness",
     "FACES_KEY",
-    "protofacekit"
+    "protofacekit",
+    "runed"
   ]
 }
