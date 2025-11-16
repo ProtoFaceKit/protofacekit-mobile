@@ -125,8 +125,10 @@
     });
 
     function onAddFrame() {
-        const defaultPixelData: [number, number, number][] = [];
-        defaultPixelData.fill([0, 0, 0], 0, FACE_PANEL_TOTAL_PIXELS);
+        const defaultPixelData: [number, number, number][] = Array.from(
+            { length: FACE_PANEL_TOTAL_PIXELS },
+            () => [0, 0, 0],
+        );
         const currentFrames = face.expressions[expressionType]?.frames ?? [];
         const newFrame: FaceFrame = { duration: 100, pixels: defaultPixelData };
 

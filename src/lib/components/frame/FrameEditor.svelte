@@ -58,6 +58,8 @@
     watch(
         () => frame,
         (frame) => {
+            console.log(frame, faceCanvases);
+
             for (const { canvas, ctx } of faceCanvases) {
                 ctx.fillStyle = "black";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -87,8 +89,10 @@
     );
 
     function createEmptyPixels(): [number, number, number][] {
-        const pixels: [number, number, number][] = [];
-        pixels.fill([0, 0, 0], 0, FACE_PANEL_TOTAL_PIXELS);
+        const pixels: [number, number, number][] = Array.from(
+            { length: FACE_PANEL_TOTAL_PIXELS },
+            () => [0, 0, 0],
+        );
         return pixels;
     }
 
