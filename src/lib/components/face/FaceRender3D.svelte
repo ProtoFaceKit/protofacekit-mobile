@@ -23,6 +23,7 @@
 
     type Props = {
         pixels: [number, number, number][];
+        disableControls?: boolean;
     };
 
     interface FaceTexture {
@@ -30,7 +31,7 @@
         data: Uint8Array;
     }
 
-    const { pixels }: Props = $props();
+    const { pixels, disableControls }: Props = $props();
 
     const FACE_PANEL_WIDTH = 64;
     const FACE_PANEL_HEIGHT = 32;
@@ -76,10 +77,7 @@
         return renderer;
     }
 
-    function createControls(
-        camera: PerspectiveCamera,
-        renderer: WebGLRenderer,
-    ) {
+    function createControls(renderer: WebGLRenderer) {
         const canvas = renderer.domElement;
         let startX = 0;
         let startCameraX = 0;
@@ -312,7 +310,9 @@
 
         const camera = createCamera(container);
         const renderer = createRenderer(container);
-        const cleanupControls = createControls(camera, renderer);
+        const cleanupControls = disableControls
+            ? () => {}
+            : createControls(renderer);
         const scene = createScene();
         createWorldLighting(scene);
         createGround(scene);

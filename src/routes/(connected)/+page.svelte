@@ -43,6 +43,10 @@
 </div>
 
 <style>
+    .container {
+        padding: 1rem;
+    }
+
     .items {
         display: flex;
         flex-flow: column;

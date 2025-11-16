@@ -1,67 +1,267 @@
 <script lang="ts">
-    import { writeFace } from "$lib/ble";
-    import FaceExpressionPreview from "$lib/components/face/FaceExpressionPreview.svelte";
-    import FacePreview from "$lib/components/face/FacePreview.svelte";
     import FaceRender3D from "$lib/components/face/FaceRender3D.svelte";
+    import FrameEditor from "$lib/components/frame/FrameEditor.svelte";
+    import FrameTimeline from "$lib/components/frame/FrameTimeline.svelte";
+    import { FACE_PANEL_TOTAL_WIDTH } from "$lib/constants";
+    import { editorContext } from "$lib/context/editorContext.svelte";
     import { faceContext } from "$lib/context/faceContext.svelte";
-    import { ExpressionType } from "$lib/types/data";
-    import { toastErrorMessage } from "$lib/utils/error";
-    import { toast } from "svelte-sonner";
-    import SolarTrashBin2BoldDuotone from "~icons/solar/trash-bin-2-bold-duotone";
+    import {
+        ExpressionType,
+        type Face,
+        type FaceExpression,
+        type FaceFrame,
+    } from "$lib/types/data";
+    import { sleep } from "$lib/utils/timing";
+    import { watch } from "runed";
 
     const context = faceContext.get();
     const storedFace = $derived(context.face);
-    const face = $derived(storedFace.face);
+
+    let editorFullscreen = $state(false);
+    let face: Face = $state({ expressions: {} });
+
+    // Update the local face state when the stored face changes
+    watch(
+        () => storedFace,
+        (storedFace) => {
+            face = createFaceCopy(storedFace.face);
+        },
+    );
+
+    editorContext.set({
+        get face() {
+            return face;
+        },
+        set face(value: Face) {
+            face = value;
+        },
+    });
+
+    /**
+     * Performs a deep copy of a face
+     *
+     * @param face
+     */
+    function createFaceCopy(face: Face): Face {
+        const expressions: Partial<Record<ExpressionType, FaceExpression>> = {};
+
+        for (const [key, value] of Object.entries(face.expressions)) {
+            expressions[parseInt(key) as ExpressionType] = {
+                frames: value.frames.map((frame) => ({
+                    pixels: frame.pixels.map(([r, g, b]) => [r, g, b]),
+                    duration: frame.duration,
+                })),
+            };
+        }
+
+        return {
+            expressions,
+        };
+    }
 
     let expressionType = $state(ExpressionType.IDLE);
 
     const expression = $derived(face.expressions[expressionType]);
+
+    let frameIndex = $state(0);
+    const frame = $derived(expression?.frames[frameIndex]);
+
+    let userSelection = $state(false);
+    let running = $state(false);
+    let abort: AbortController | undefined;
+
+    async function animate(expression: FaceExpression, abort: AbortController) {
+        if (expression.frames.length < 1) {
+            // No frames to render
+            return;
+        }
+
+        // Frame change loop
+        while (!abort.signal.aborted) {
+            const currentFrame = expression.frames[frameIndex];
+            await sleep(currentFrame.duration, abort);
+
+            if (frameIndex + 1 === expression.frames.length) {
+                // Restart the expression
+                frameIndex = 0;
+            } else {
+                // Moved to the next frame
+                frameIndex++;
+            }
+        }
+    }
+
+    function onStart() {
+        userSelection = false;
+
+        abort?.abort();
+
+        abort = new AbortController();
+        running = true;
+
+        if (expression) {
+            animate(expression, abort)
+                .then(() => {})
+                .catch(() => {});
+        }
+    }
+
+    function onStop() {
+        abort?.abort();
+        running = false;
+    }
+
+    $effect(() => {
+        // User selection overrides automatic playing
+        if (userSelection) return;
+
+        onStart();
+
+        return () => {
+            onStop();
+        };
+    });
+
+    function onAddFrame() {
+        const defaultPixelData: [number, number, number][] = [];
+        defaultPixelData.fill([0, 0, 0], 0, FACE_PANEL_TOTAL_WIDTH);
+        const currentFrames = face.expressions[expressionType]?.frames ?? [];
+        const newFrame: FaceFrame = { duration: 100, pixels: defaultPixelData };
+
+        face = {
+            ...face,
+            expressions: {
+                ...face.expressions,
+                [expressionType]: {
+                    frames: [...currentFrames, newFrame],
+                },
+            },
+        };
+    }
+
+    function onChangeFrameDuration(index: number, duration: number) {
+        const currentFrames = face.expressions[expressionType]?.frames ?? [];
+        face = {
+            ...face,
+            expressions: {
+                ...face.expressions,
+                [expressionType]: {
+                    frames: currentFrames.map((frame, otherIndex) => {
+                        if (otherIndex === index) {
+                            return {
+                                ...frame,
+                                duration,
+                            };
+                        } else {
+                            return frame;
+                        }
+                    }),
+                },
+            },
+        };
+    }
+
+    function onSelectFrame(index: number) {
+        onStop();
+        userSelection = true;
+        frameIndex = index;
+    }
+
+    function onDeleteFrame(index: number) {
+        const currentFrames = face.expressions[expressionType]?.frames ?? [];
+        face = {
+            ...face,
+            expressions: {
+                ...face.expressions,
+                [expressionType]: {
+                    frames: currentFrames.filter((frame, otherIndex) => {
+                        return otherIndex !== index;
+                    }),
+                },
+            },
+        };
+    }
 </script>
 
-<div>
-    <div class="heading">
-        <div class="path">
-            <p class="path--segment">Faces /</p>
-            <h1 class="path--name">{storedFace.name}</h1>
-        </div>
+<div class="container">
+    <div>
+        <div class="heading">
+            <div class="path">
+                <p class="path--segment">Faces /</p>
+                <h1 class="path--name">{storedFace.name}</h1>
+            </div>
 
-        <div class="actions">
-            <a class="btn" href="/">Back</a>
+            <div class="actions">
+                <a class="btn" href="/">Save</a>
+                <a class="btn" href="/">Back</a>
+            </div>
         </div>
+    </div>
+
+    <div class="expressions">
+        <button
+            class="expression"
+            class:expression--active={expressionType === ExpressionType.IDLE}
+            onclick={() => (expressionType = ExpressionType.IDLE)}
+        >
+            Idle
+        </button>
+        <button
+            class="expression"
+            class:expression--active={expressionType === ExpressionType.TALKING}
+            onclick={() => (expressionType = ExpressionType.TALKING)}
+        >
+            Talking
+        </button>
+    </div>
+
+    <div class="preview">
+        <FaceRender3D pixels={frame?.pixels ?? []} />
+    </div>
+
+    <div class="timeline">
+        <FrameTimeline
+            frames={expression?.frames ?? []}
+            activeFrameIndex={frameIndex}
+            onPlay={onStart}
+            onPause={onStop}
+            {onSelectFrame}
+            {onAddFrame}
+            {onChangeFrameDuration}
+            {running}
+        />
+    </div>
+
+    <div class="editor" class:editor--fullscreen={editorFullscreen}>
+        {#if frame}
+            <FrameEditor
+                {frame}
+                onDelete={() => onDeleteFrame(frameIndex)}
+                onToggleFullscreen={() =>
+                    (editorFullscreen = !editorFullscreen)}
+            />
+        {:else}
+            Select a frame
+        {/if}
     </div>
 </div>
 
-<div class="expressions">
-    <button
-        class="btn btn--span btn--large"
-        onclick={() => (expressionType = ExpressionType.IDLE)}
-    >
-        Idle
-    </button>
-    <button
-        class="btn btn--span btn--large"
-        onclick={() => (expressionType = ExpressionType.TALKING)}
-    >
-        Talking
-    </button>
-</div>
-
-<div class="preview">
-    {#if expression}
-        <FaceExpressionPreview {expression} />
-    {:else}
-        <FaceRender3D pixels={[]} />
-    {/if}
-</div>
-
 <style>
+    .container {
+        display: flex;
+        flex-flow: column;
+        height: 100%;
+        overflow: hidden;
+    }
+
     .heading {
         display: flex;
         flex-flow: row;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1rem;
         overflow: hidden;
+        margin-bottom: 0.5rem;
+        padding: 0 0.5rem;
     }
 
     .path {
@@ -92,19 +292,44 @@
 
     .actions {
         display: flex;
-        gap: 1rem;
+        gap: 0.5rem;
         flex-shrink: 0;
     }
 
     .preview {
         height: 192px;
         background: black;
-        margin-top: 1rem;
     }
 
     .expressions {
         display: flex;
-        gap: 1em;
         flex-flow: row;
+    }
+
+    .expression {
+        flex: auto;
+        border: none;
+        background-color: #222;
+        color: #fff;
+        padding: 0.5rem;
+    }
+
+    .expression--active {
+        background-color: #333;
+    }
+
+    .editor {
+        background-color: red;
+        flex: auto;
+    }
+
+    .editor--fullscreen {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
     }
 </style>

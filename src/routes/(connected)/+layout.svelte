@@ -72,7 +72,6 @@
     }
 
     .container {
-        padding: 1rem;
         flex: auto;
         overflow: auto;
     }
