@@ -43,8 +43,8 @@
         {/each}
     </div>
 
-    <button class="btn" onclick={onAddFrame}>+</button>
-    <button class="btn" onclick={running ? onPause : onPlay}>
+    <button class="btn btn--no-round" onclick={onAddFrame}>+</button>
+    <button class="btn btn--no-round" onclick={running ? onPause : onPlay}>
         {#if running}
             <SolarPauseBold />
         {:else}
@@ -66,5 +66,9 @@
         flex-flow: row;
         flex: auto;
         overflow: auto;
+    }
+
+    .btn--no-round {
+        border-radius: 0;
     }
 </style>

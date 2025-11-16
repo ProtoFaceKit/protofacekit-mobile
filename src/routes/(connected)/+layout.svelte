@@ -3,11 +3,18 @@
     import icon from "$lib/assets/protofacekit.svg";
     import type { LayoutProps } from "./$types";
     import { toast } from "svelte-sonner";
+    import { onMount } from "svelte";
+    import { rendererContext } from "$lib/context/rendererContext.svelte";
+    import { WebGLRenderer } from "three";
 
     const context = deviceContext.get();
     const device = $derived(context.device);
 
     const { children }: LayoutProps = $props();
+
+    const renderer = new WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    rendererContext.set(renderer);
 </script>
 
 <div class="view">

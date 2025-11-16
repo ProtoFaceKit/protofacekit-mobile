@@ -20,6 +20,7 @@
         WebGLRenderer,
     } from "three";
     import { watch } from "runed";
+    import { rendererContext } from "$lib/context/rendererContext.svelte";
 
     type Props = {
         pixels: [number, number, number][];
@@ -37,6 +38,9 @@
     const FACE_PANEL_HEIGHT = 32;
     const MAX_CAMERA_ANGLE = 0.5;
 
+    const renderer = rendererContext.get();
+
+    let canvas: HTMLCanvasElement | undefined;
     let container: HTMLDivElement | undefined;
     let needsTextureUpdate = false;
 
@@ -69,16 +73,7 @@
         return camera;
     }
 
-    function createRenderer(container: HTMLDivElement) {
-        const { clientWidth, clientHeight } = container;
-        const renderer = new WebGLRenderer({ antialias: true });
-        renderer.setSize(clientWidth, clientHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        return renderer;
-    }
-
-    function createControls(renderer: WebGLRenderer) {
-        const canvas = renderer.domElement;
+    function createControls(canvas: HTMLCanvasElement) {
         let startX = 0;
         let startCameraX = 0;
         let touchStartY = 0;
@@ -306,13 +301,14 @@
     }
 
     onMount(() => {
-        if (!container) return;
+        if (!container || !canvas) return;
+        const ctx = canvas.getContext("2d")!;
 
         const camera = createCamera(container);
-        const renderer = createRenderer(container);
+        // const renderer = createRenderer(container);
         const cleanupControls = disableControls
             ? () => {}
-            : createControls(renderer);
+            : createControls(canvas);
         const scene = createScene();
         createWorldLighting(scene);
         createGround(scene);
@@ -326,6 +322,17 @@
 
         const animate = () => {
             animationId = requestAnimationFrame(animate);
+
+            if (!container || !canvas) return;
+
+            const { width, height } =
+                canvas.parentElement!.getBoundingClientRect();
+
+            const pixelRatio = renderer.getPixelRatio();
+            renderer.setSize(width, height, false);
+
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
 
             // Resume auto animation 2 seconds after last interaction
             const timeSinceInteraction = Date.now() - lastInteractionTime;
@@ -364,32 +371,26 @@
             }
 
             renderer.render(scene, camera);
-        };
 
-        const onWindowResize = () => {
-            if (!container) return;
-            const w = container.clientWidth;
-            const h = container.clientHeight;
-            camera.aspect = w / h;
-            camera.updateProjectionMatrix();
-            renderer.setSize(w, h);
+            // Copy framebuffer to this canvas
+            canvas.width = width * pixelRatio;
+            canvas.height = height * pixelRatio;
+            ctx.drawImage(renderer.domElement, 0, 0);
         };
-
-        window.addEventListener("resize", onWindowResize);
 
         animate();
 
         return () => {
             if (animationId) cancelAnimationFrame(animationId);
-            window.removeEventListener("resize", onWindowResize);
             cleanupControls();
-            renderer.dispose();
         };
     });
 </script>
 
 <div class="view">
-    <div bind:this={container} class="container"></div>
+    <div bind:this={container} class="container">
+        <canvas bind:this={canvas}></canvas>
+    </div>
 </div>
 
 <style>

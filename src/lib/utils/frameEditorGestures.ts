@@ -37,13 +37,17 @@ export function createFrameEditorGestures({
     let startDist = 0;
     let startMid: Point | null = null;
 
+    const spacer = 20;
+    const inset = 15;
+
     let currentScale =
         // Fit the scale to the container scale
-        wrapperContainer.clientWidth / (FACE_PANEL_TOTAL_WIDTH * ledScale + 20);
+        wrapperContainer.clientWidth /
+        (FACE_PANEL_TOTAL_WIDTH * ledScale + spacer + inset * 2);
     let baseScale = 1;
 
-    let translateX = 0;
-    let translateY = 0;
+    let translateX = inset;
+    let translateY = 75;
 
     let lastPaintedCell: LastPaintedCell | null = null;
 

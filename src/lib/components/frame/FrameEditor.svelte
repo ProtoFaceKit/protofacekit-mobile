@@ -5,6 +5,7 @@
     import SolarMaximizeBold from "~icons/solar/maximize-bold";
     import SolarCopyBoldDuotone from "~icons/solar/copy-bold-duotone";
     import SolarTrashBin2BoldDuotone from "~icons/solar/trash-bin-2-bold-duotone";
+    import SolarMirrorLeftBold from "~icons/solar/mirror-left-bold";
     import type { RgbColor } from "$lib/types/color";
     import {
         FACE_PANEL_COUNT,
@@ -15,9 +16,8 @@
     } from "$lib/constants";
     import { useDebounce, watch } from "runed";
     import { onMount } from "svelte";
-    import { distance, midpoint, type Point } from "$lib/types/math";
     import { createFrameEditorGestures } from "$lib/utils/frameEditorGestures";
-
+    import ColorPicker from "svelte-awesome-color-picker";
     const LED_SCALE = 12;
 
     interface Props {
@@ -108,8 +108,6 @@
         canvas.style.width = `${canvas.width}px`;
         canvas.style.height = `${canvas.height}px`;
 
-        // Optional: remove aspect-ratio
-        canvas.style.aspectRatio = "auto";
         canvas.style.flexShrink = "0";
 
         // Prevent scrolling on touch
@@ -132,12 +130,13 @@
         g: number,
         b: number,
     ) {
+        row = Math.floor(row);
+        col = Math.floor(col);
+
         const centerX = col * LED_SCALE + LED_SCALE / 2;
         const centerY = row * LED_SCALE + LED_SCALE / 2;
 
         ctx.fillStyle = `rgb(${r},${g},${b})`;
-        ctx.shadowColor = `rgb(${r},${g},${b})`;
-        ctx.shadowBlur = r === 0 && g === 0 && b === 0 ? 0 : 3;
 
         ctx.beginPath();
         ctx.arc(centerX, centerY, LED_SCALE / 2 - 1, 0, Math.PI * 2);
@@ -175,8 +174,6 @@
         centerRow: number,
     ) {
         const { r, g, b } = erase ? { r: 0, g: 0, b: 0 } : paintColor;
-        console.log(paintSize);
-        // Calculate radius: size 1 = radius 0, size 2 = radius 0.5, size 3 = radius 1, etc.
         const radius = (paintSize - 1) / 2;
         const radiusCeil = Math.ceil(radius);
 
@@ -198,16 +195,6 @@
                     }
                 }
             }
-        }
-    }
-
-    function clearCanvas() {
-        pixels = createEmptyPixels();
-        setFramePixelsRoot(pixels);
-
-        for (const { canvas, ctx } of faceCanvases) {
-            ctx.fillStyle = "black";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
     }
 
@@ -259,14 +246,14 @@
 
 <div class="container">
     <div class="actions">
-        <button onclick={onDelete}>
-            <SolarTrashBin2BoldDuotone />
-        </button>
-        <button onclick={onToggleFullscreen}>
+        <button class="action" onclick={onToggleFullscreen}>
             <SolarMaximizeBold />
         </button>
-        <button onclick={onDuplicate}>
+        <button class="action" onclick={onDuplicate}>
             <SolarCopyBoldDuotone />
+        </button>
+        <button class="action" onclick={onDelete}>
+            <SolarTrashBin2BoldDuotone />
         </button>
     </div>
 
@@ -275,29 +262,85 @@
     </div>
 
     <div class="toolbar">
-        <button>
-            <SolarPaintRollerBoldDuotone />
-        </button>
+        <div class="toolbar-group">
+            <button
+                class="toolbar-button"
+                class:toolbar-button--active={!erase}
+                onclick={() => (erase = false)}
+            >
+                <SolarPaintRollerBoldDuotone />
+            </button>
 
-        <button>
-            <SolarEraserBoldDuotone />
-        </button>
+            <button
+                class="toolbar-button"
+                class:toolbar-button--active={erase}
+                onclick={() => (erase = true)}
+            >
+                <SolarEraserBoldDuotone />
+            </button>
+        </div>
+
+        <div class="toolbar-group">
+            <button
+                class="toolbar-button"
+                class:toolbar-button--active={mirror}
+                onclick={() => (mirror = !mirror)}
+            >
+                <SolarMirrorLeftBold />
+            </button>
+        </div>
+
+        {#if !erase}
+            <div class="toolbar-group">
+                <div class="color-picker">
+                    <ColorPicker
+                        rgb={paintColor}
+                        onInput={(color) => {
+                            if (color.rgb) paintColor = color.rgb;
+                        }}
+                        position="responsive"
+                        label={""}
+                        isAlpha={false}
+                    />
+                </div>
+            </div>
+        {/if}
+
+        <div class="toolbar-group">
+            <div class="brush-size">
+                <span class="brush-size-label">Brush Size</span>
+
+                <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    bind:value={paintSize}
+                    class="slider"
+                />
+            </div>
+        </div>
     </div>
 </div>
 
 <style>
     .container {
+        position: relative;
         display: flex;
         flex-flow: column;
         height: 100%;
-        overflow: hidden;
     }
 
     .canvas {
+        border-top: 1px solid white;
         flex: auto;
         overflow: hidden;
         position: relative;
         flex-shrink: 0;
+        z-index: 0;
+    }
+
+    .canvas:global(> .panning > canvas) {
+        border: 2px solid white;
     }
 
     .panning {
@@ -312,12 +355,28 @@
         transform-origin: 0 0;
         touch-action: none;
 
-        background: blue;
+        position: absolute;
+        will-change: transform;
     }
 
     .actions {
+        position: absolute;
+        top: 1px;
+        right: 0;
+        flex-shrink: 0;
+        flex-grow: 0;
         display: flex;
-        width: 100%;
+        align-items: center;
+        justify-self: flex-end;
+        align-items: flex-end;
+        z-index: 1;
+    }
+
+    .action {
+        background-color: #222;
+        color: #fff;
+        border: none;
+        height: 3rem;
     }
 
     .toolbar {
@@ -325,5 +384,44 @@
         flex-grow: 0;
         display: flex;
         align-items: center;
+        background-color: #111;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .toolbar-group {
+        display: flex;
+        height: 3rem;
+        align-items: center;
+        border: 1px solid #222;
+    }
+
+    .toolbar-button {
+        background-color: #222;
+        color: #fff;
+        border: none;
+        height: 100%;
+    }
+
+    .toolbar-button--active {
+        background-color: #622d2d;
+    }
+
+    .color-picker {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .brush-size-label {
+        margin-left: 0.5rem;
+    }
+
+    .brush-size {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        gap: 1rem;
     }
 </style>

@@ -2,10 +2,7 @@
     import FaceRender3D from "$lib/components/face/FaceRender3D.svelte";
     import FrameEditor from "$lib/components/frame/FrameEditor.svelte";
     import FrameTimeline from "$lib/components/frame/FrameTimeline.svelte";
-    import {
-        FACE_PANEL_TOTAL_PIXELS,
-        FACE_PANEL_TOTAL_WIDTH,
-    } from "$lib/constants";
+    import { FACE_PANEL_TOTAL_PIXELS } from "$lib/constants";
     import { editorContext } from "$lib/context/editorContext.svelte";
     import { faceContext } from "$lib/context/faceContext.svelte";
     import {
@@ -89,19 +86,24 @@
 
     function onStop() {
         abort?.abort();
+        abort = undefined;
         running = false;
+        userSelection = true;
     }
 
-    $effect(() => {
-        // User selection overrides automatic playing
-        if (userSelection) return;
+    watch(
+        () => expression,
+        () => {
+            // User selection overrides automatic playing
+            if (userSelection) return;
 
-        onStart();
+            onStart();
 
-        return () => {
-            onStop();
-        };
-    });
+            return () => {
+                onStop();
+            };
+        },
+    );
 
     function onAddFrame() {
         const defaultPixelData: [number, number, number][] = Array.from(
@@ -110,13 +112,14 @@
         );
         const currentFrames = face.expressions[expressionType]?.frames ?? [];
         const newFrame: FaceFrame = { duration: 100, pixels: defaultPixelData };
-
+        const newFrames = [...currentFrames];
+        newFrames.splice(frameIndex + 1, 0, newFrame);
         face = {
             ...face,
             expressions: {
                 ...face.expressions,
                 [expressionType]: {
-                    frames: [...currentFrames, newFrame],
+                    frames: newFrames,
                 },
             },
         };
@@ -164,13 +167,14 @@
             },
         };
     }
+
     function onDuplicateFrame(index: number) {
         const currentFrames = face.expressions[expressionType]?.frames ?? [];
-        const existingFrame = currentFrames[index];
+        const newFrames = [...currentFrames];
+        const existingFrame = newFrames[index];
         if (!existingFrame) return;
 
-        const newFrames = [...currentFrames];
-        newFrames.splice(index, 0, deepClone(existingFrame));
+        newFrames.splice(index + 1, 0, deepClone(existingFrame));
 
         face = {
             ...face,
@@ -352,18 +356,28 @@
     }
 
     .editor {
-        background-color: red;
         flex: auto;
+        background-color: #000;
+        background-image:
+            linear-gradient(#222 1px, transparent 1px),
+            linear-gradient(90deg, #222 1px, transparent 1px);
+        background-size: 40px 40px; /* size of the grid squares */
+        background-size:
+            40px 40px,
+            40px 40px,
+            200px 200px,
+            200px 200px;
+        touch-action: none;
     }
 
     .editor--fullscreen {
-        padding-top: env(safe-area-inset-top);
-        padding-bottom: env(safe-area-inset-bottom);
         position: absolute;
         left: 0;
-        top: 0;
+        top: env(safe-area-inset-top);
         width: 100%;
-        height: 100%;
+        height: calc(
+            100% - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+        );
         z-index: 999;
     }
 </style>
