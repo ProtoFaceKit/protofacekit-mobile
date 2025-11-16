@@ -1,6 +1,8 @@
 {
   "words": [
     "raycaster",
-    "metalness"
+    "metalness",
+    "FACES_KEY",
+    "protofacekit"
   ]
 }

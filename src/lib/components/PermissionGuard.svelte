@@ -40,7 +40,13 @@
 {#if checkingPermissionGranted}
     <p>Checking permissions...</p>
 {:else if !permissionGranted}
-    <p>Please grant required permissions</p>
+    <p class="grant">Please grant required permissions</p>
 {:else}
     {@render children?.()}
 {/if}
+
+<style>
+    .grant {
+        padding: 1rem;
+    }
+</style>
