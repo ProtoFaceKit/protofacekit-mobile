@@ -22,6 +22,7 @@
     import { rendererContext } from "$lib/context/rendererContext.svelte";
     import type { FaceRenderControls } from "$lib/render/faceRenderControls";
     import faceRenderControls from "$lib/render/faceRenderControls";
+    import { FACE_PANEL_HEIGHT, FACE_PANEL_WIDTH } from "$lib/constants";
 
     type Props = {
         pixels: [number, number, number][];
@@ -35,20 +36,20 @@
 
     const { pixels, disableControls }: Props = $props();
 
-    const FACE_PANEL_WIDTH = 64;
-    const FACE_PANEL_HEIGHT = 32;
-    const MAX_CAMERA_ANGLE = 0.5;
+    const MAX_CAMERA_ANGLE = 0.45;
+    const PIXEL_TO_WORLD_SCALE = 0.01;
+    const RADIUS = 1.5;
 
     const renderer = rendererContext.get();
-
-    let canvas: HTMLCanvasElement | undefined;
-    let container: HTMLDivElement | undefined;
-    let needsTextureUpdate = false;
 
     const faceCanvases: FaceTexture[] = [
         createFaceTexture(),
         createFaceTexture(),
     ];
+
+    let canvas: HTMLCanvasElement | undefined;
+    let container: HTMLDivElement | undefined;
+    let needsTextureUpdate = false;
 
     // Only mark for update when frame changes, don't do the heavy work here
     watch(
@@ -58,14 +59,8 @@
         },
     );
 
-    function createCamera(container: HTMLDivElement) {
-        const { clientWidth, clientHeight } = container;
-        const camera = new PerspectiveCamera(
-            50,
-            clientWidth / clientHeight,
-            0.1,
-            100,
-        );
+    function createCamera(width: number, height: number) {
+        const camera = new PerspectiveCamera(50, width / height, 0.1, 100);
         camera.position.set(0, 0.5, 2);
         return camera;
     }
@@ -116,6 +111,7 @@
     }
 
     function updateTextures() {
+        const DEFAULT_PIXEL: [number, number, number] = [0, 0, 0];
         const totalWidth = faceCanvases.length * FACE_PANEL_WIDTH;
 
         for (let i = 0; i < faceCanvases.length; i += 1) {
@@ -125,20 +121,12 @@
             for (let y = 0; y < FACE_PANEL_HEIGHT; y++) {
                 for (let x = 0; x < FACE_PANEL_WIDTH; x++) {
                     const idx = y * totalWidth + (x + i * FACE_PANEL_WIDTH);
-                    const pixel = pixels[idx];
+                    const [r, g, b] = pixels[idx] ?? DEFAULT_PIXEL;
 
-                    if (pixel) {
-                        const [r, g, b] = pixel;
-                        data[p++] = r;
-                        data[p++] = g;
-                        data[p++] = b;
-                        data[p++] = 255;
-                    } else {
-                        data[p++] = 0;
-                        data[p++] = 0;
-                        data[p++] = 0;
-                        data[p++] = 255;
-                    }
+                    data[p++] = r;
+                    data[p++] = g;
+                    data[p++] = b;
+                    data[p++] = 255;
                 }
             }
 
@@ -154,13 +142,12 @@
         });
 
         const root = new Group();
-        const panelWidth = FACE_PANEL_WIDTH * 0.01;
-        const panelHeight = FACE_PANEL_HEIGHT * 0.01;
+        const panelWidth = FACE_PANEL_WIDTH * PIXEL_TO_WORLD_SCALE;
+        const panelHeight = FACE_PANEL_HEIGHT * PIXEL_TO_WORLD_SCALE;
         const gap = 0.2;
 
         for (let i = 0; i < faceCanvases.length; i++) {
             const faceCanvas = faceCanvases[i];
-
             const side = i === 0 ? -1 : 1;
 
             const plane = new PlaneGeometry(panelWidth, panelHeight);
@@ -195,9 +182,16 @@
 
     onMount(() => {
         if (!container || !canvas) return;
-        const ctx = canvas.getContext("2d")!;
 
-        const camera = createCamera(container);
+        const localCanvas = canvas;
+        const ctx = canvas.getContext("2d")!;
+        const containerBounds = container.getBoundingClientRect();
+
+        let width = containerBounds.width;
+        let height = containerBounds.height;
+        let animationId: number | undefined;
+
+        const camera = createCamera(width, height);
 
         let controls: FaceRenderControls | undefined;
         if (!disableControls) {
@@ -217,86 +211,91 @@
         const helmet = createHelmet(faceCanvases);
         scene.add(helmet);
 
-        let animationId: number | undefined;
-
-        const animate = () => {
-            animationId = requestAnimationFrame(animate);
-
-            if (!container || !canvas) return;
-
-            const { width, height } =
-                canvas.parentElement!.getBoundingClientRect();
-
-            camera.aspect = width / height;
-            camera.updateProjectionMatrix();
-
-            let shouldAutoAnimate = true;
+        function updateCameraPosition() {
             if (controls) {
-                // Resume auto animation 2 seconds after last interaction
                 const timeSinceInteraction =
                     Date.now() - controls.lastInteractionTime;
-                shouldAutoAnimate = timeSinceInteraction > 2000;
+
+                // User controlled position is active
+                if (timeSinceInteraction < 2000) {
+                    camera.position.x = controls.userCameraX;
+                    camera.position.z = RADIUS;
+
+                    // Calculate angle from user position
+                    const angle = Math.atan2(controls.userCameraX, RADIUS);
+                    helmet.rotation.y = -angle;
+                    return;
+                }
             }
 
-            let angle = 0;
+            // Slowly move camera left and right in an arc
+            const time = Date.now() * 0.0005;
+            const angle = Math.sin(time) * MAX_CAMERA_ANGLE;
 
-            if (shouldAutoAnimate) {
-                // Slowly move camera left and right in an arc
-                const time = Date.now() * 0.0005;
-                angle = Math.sin(time) * MAX_CAMERA_ANGLE;
-                const radius = 1.5;
-                camera.position.x = Math.sin(angle) * radius;
-                camera.position.z = Math.cos(angle) * radius;
+            camera.position.x = Math.sin(angle) * RADIUS;
+            camera.position.z = Math.cos(angle) * RADIUS;
 
-                // Rotate the helmet to face the camera
-                helmet.rotation.y = -angle;
-            } else if (controls) {
-                // Use user-controlled position
-                camera.position.x = controls.userCameraX;
-                camera.position.z = 1.5;
+            // Rotate the helmet to face the camera
+            helmet.rotation.y = -angle;
+        }
 
-                // Calculate angle from user position
-                angle = Math.atan2(controls.userCameraX, 1.5);
-                helmet.rotation.y = -angle;
-            }
+        function animate() {
+            animationId = requestAnimationFrame(animate);
+
+            // Update the camera position
+            updateCameraPosition();
 
             // Adjust look-at target to center the visible panel
-            const targetX = Math.sin(helmet.rotation.y) * 1.5;
+            const targetX = Math.sin(helmet.rotation.y) * RADIUS;
             camera.lookAt(targetX, 0.5, 0);
 
-            // Only update textures if needed, inside the animation loop
+            // Update texture if needed
             if (needsTextureUpdate) {
                 updateTextures();
                 needsTextureUpdate = false;
             }
 
-            renderer.renderScene(canvas, ctx, width, height, scene, camera);
-        };
+            renderer.renderScene(
+                localCanvas,
+                ctx,
+                width,
+                height,
+                scene,
+                camera,
+            );
+        }
 
         animate();
 
+        function onResize() {
+            if (!container) return;
+
+            const containerBounds = container.getBoundingClientRect();
+
+            // Update the stored size
+            width = containerBounds.width;
+            height = containerBounds.height;
+
+            // Update the camera size and projection matrix
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        }
+
+        window.addEventListener("resize", onResize);
+
         return () => {
+            window.removeEventListener("resize", onResize);
             if (animationId) cancelAnimationFrame(animationId);
             controls?.cleanup();
         };
     });
 </script>
 
-<div class="view">
-    <div bind:this={container} class="container">
-        <canvas bind:this={canvas}></canvas>
-    </div>
+<div bind:this={container} class="container">
+    <canvas bind:this={canvas}></canvas>
 </div>
 
 <style>
-    .view {
-        display: flex;
-        flex-flow: column;
-        gap: 1rem;
-        width: 100%;
-        height: 100%;
-    }
-
     .container {
         width: 100%;
         height: 100%;
