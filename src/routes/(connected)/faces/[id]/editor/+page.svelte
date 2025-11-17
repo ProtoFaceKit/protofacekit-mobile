@@ -277,7 +277,11 @@
             </div>
 
             <div class="actions">
-                <button class="btn" onclick={onSave} disabled={saving}>
+                <button
+                    class="btn btn--primary"
+                    onclick={onSave}
+                    disabled={saving}
+                >
                     Save
                 </button>
                 <a class="btn" href="/">Back</a>
