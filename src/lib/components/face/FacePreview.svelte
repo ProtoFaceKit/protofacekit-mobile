@@ -20,9 +20,13 @@
     let expression: FaceExpression | undefined = $state(undefined);
 
     async function animate(face: Face, abort: AbortController) {
-        const validExpressions = Object.keys(face.expressions).map(
-            (value) => parseInt(value) as ExpressionType,
-        );
+        const validExpressions = Object.keys(face.expressions)
+            .map((value) => parseInt(value) as ExpressionType)
+            .filter(
+                (expressionType) =>
+                    face.expressions[expressionType] &&
+                    face.expressions[expressionType].frames.length > 0,
+            );
 
         // Nothing to render
         if (validExpressions.length < 1) return;
@@ -40,7 +44,7 @@
             // Move to the next expression
             expressionIndex++;
 
-            if (expressionIndex === expressions.length) {
+            if (expressionIndex === validExpressions.length) {
                 expressionIndex = 0;
             }
         }

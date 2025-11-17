@@ -5,6 +5,7 @@
     import { FACE_PANEL_TOTAL_PIXELS } from "$lib/constants";
     import { editorContext } from "$lib/context/editorContext.svelte";
     import { faceContext } from "$lib/context/faceContext.svelte";
+    import { faceStoreContext } from "$lib/context/faceStoreContext.svelte";
     import {
         ExpressionType,
         type Face,
@@ -12,8 +13,12 @@
         type FaceFrame,
     } from "$lib/types/data";
     import { deepClone } from "$lib/utils/clone";
+    import { toastErrorMessage } from "$lib/utils/error";
     import { sleep } from "$lib/utils/timing";
     import { watch } from "runed";
+    import { toast } from "svelte-sonner";
+
+    const faceStore = faceStoreContext.get();
 
     const context = faceContext.get();
     const storedFace = $derived(context.face);
@@ -47,6 +52,8 @@
     let userSelection = $state(false);
     let running = $state(false);
     let abort: AbortController | undefined;
+
+    let saving = $state(false);
 
     async function animate(expression: FaceExpression, abort: AbortController) {
         if (expression.frames.length < 1) {
@@ -208,6 +215,30 @@
             },
         };
     }
+
+    async function onSave() {
+        saving = true;
+
+        const savePromise = faceStore.updateFace({
+            ...storedFace,
+            face,
+        });
+        toast.promise(savePromise, {
+            loading: "Saving face..",
+            success: "Saved face!",
+            error: toastErrorMessage("Failed to save face"),
+        });
+
+        try {
+            await savePromise;
+
+            faceStore.appendFace;
+        } catch (_err) {
+            // toast.promise catches this
+        } finally {
+            saving = false;
+        }
+    }
 </script>
 
 <div class="container">
@@ -219,7 +250,9 @@
             </div>
 
             <div class="actions">
-                <a class="btn" href="/">Save</a>
+                <button class="btn" onclick={onSave} disabled={saving}>
+                    Save
+                </button>
                 <a class="btn" href="/">Back</a>
             </div>
         </div>
@@ -260,7 +293,9 @@
     </div>
 
     {#if running}
-        <p>Pause animation to edit frame</p>
+        <div class="running">
+            <p>Pause the current animation to edit a frame</p>
+        </div>
     {:else}
         <div
             class="editor"
@@ -284,6 +319,11 @@
 </div>
 
 <style>
+    .running {
+        padding: 1rem;
+        color: #999;
+    }
+
     .container {
         display: flex;
         flex-flow: column;

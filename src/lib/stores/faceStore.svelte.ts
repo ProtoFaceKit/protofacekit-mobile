@@ -26,6 +26,9 @@ export interface FaceStore {
     /** Append a face to the store */
     appendFace: (face: StoredFace) => Promise<void>;
 
+    /** Update a stored face */
+    updateFace: (face: StoredFace) => Promise<void>;
+
     /** Remove a face from the store */
     removeFace: (id: string) => Promise<void>;
 }
@@ -67,6 +70,9 @@ export function createFaceStore(): FaceStore {
         appendFace: async (face) => {
             faces = await appendStoredFace(face);
         },
+        updateFace: async (face) => {
+            faces = await updateStoredFace(face);
+        },
         removeFace: async (id) => {
             faces = await removeStoredFace(id);
         },
@@ -82,6 +88,22 @@ async function appendStoredFace(face: StoredFace) {
     return facesMutex.runExclusive(async () => {
         const faces = await getStoredFaces();
         const newFaces = [...faces, face];
+        await facesStore.set(FACES_KEY, newFaces);
+        await facesStore.save();
+        return newFaces;
+    });
+}
+
+async function updateStoredFace(face: StoredFace) {
+    return facesMutex.runExclusive(async () => {
+        const faces = await getStoredFaces();
+        const newFaces = faces.map((otherFace) => {
+            if (otherFace.id === face.id) {
+                return face;
+            } else {
+                return otherFace;
+            }
+        });
         await facesStore.set(FACES_KEY, newFaces);
         await facesStore.save();
         return newFaces;
