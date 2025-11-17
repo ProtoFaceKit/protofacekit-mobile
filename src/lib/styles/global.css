@@ -85,6 +85,14 @@ a:hover {
     color: #fff;
 }
 
+.btn:visited {
+    color: #fff;
+}
+
+.btn:hover {
+    color: #fff;
+}
+
 /* 1. Use a more-intuitive box-sizing model */
 *,
 *::before,
