@@ -47,36 +47,42 @@
     });
 </script>
 
-<div class="heading">
-    <h1>Create Face</h1>
-    <a class="btn" href="/">Back</a>
-</div>
-
-<form class="form" onsubmit={onSubmit}>
-    <div class="form-field">
-        <label for="name">Name</label>
-        <input
-            placeholder="Test Face"
-            type="text"
-            id="name"
-            class="input"
-            minlength={1}
-            required
-            bind:value={name}
-        />
-        <p class="form-field__description">Give this face a name</p>
+<div class="container">
+    <div class="heading">
+        <h1>Create Face</h1>
+        <a class="btn" href="/">Back</a>
     </div>
 
-    <button
-        type="submit"
-        class="btn btn--large btn--span btn--primary"
-        disabled={submitting}
-    >
-        Create
-    </button>
-</form>
+    <form class="form" onsubmit={onSubmit}>
+        <div class="form-field">
+            <label for="name">Name</label>
+            <input
+                placeholder="Test Face"
+                type="text"
+                id="name"
+                class="input"
+                minlength={1}
+                required
+                bind:value={name}
+            />
+            <p class="form-field__description">Give this face a name</p>
+        </div>
+
+        <button
+            type="submit"
+            class="btn btn--large btn--span btn--primary"
+            disabled={submitting}
+        >
+            Create
+        </button>
+    </form>
+</div>
 
 <style>
+    .container {
+        padding: 1rem;
+    }
+
     .heading {
         display: flex;
         flex-flow: row;

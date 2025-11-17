@@ -33,7 +33,7 @@
     }
 </script>
 
-<div>
+<div class="container">
     <h1>Confirm Delete</h1>
     <p>Are you sure you want to delete the <b>{face.name}</b> face?</p>
 
@@ -51,6 +51,10 @@
 </div>
 
 <style>
+    .container {
+        padding: 1rem;
+    }
+
     .actions {
         display: flex;
         gap: 1rem;
