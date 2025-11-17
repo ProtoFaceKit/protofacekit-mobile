@@ -194,6 +194,33 @@
         };
     }
 
+    function onMoveFrame(fromIndex: number, toIndex: number) {
+        const currentFrames = face.expressions[expressionType]?.frames ?? [];
+        const newFrames = [...currentFrames];
+
+        const tempA = newFrames[fromIndex];
+        const tempB = newFrames[toIndex];
+        if (!tempA || !tempB) return;
+
+        newFrames[fromIndex] = tempB;
+        newFrames[toIndex] = tempA;
+
+        // Swap current frame if we are moving it
+        if (frameIndex === fromIndex) {
+            frameIndex = toIndex;
+        }
+
+        face = {
+            ...face,
+            expressions: {
+                ...face.expressions,
+                [expressionType]: {
+                    frames: newFrames,
+                },
+            },
+        };
+    }
+
     function onChangePixels(index: number, pixels: [number, number, number][]) {
         const currentFrames = face.expressions[expressionType]?.frames ?? [];
         face = {
@@ -285,6 +312,7 @@
             activeFrameIndex={frameIndex}
             onPlay={onStart}
             onPause={onStop}
+            {onMoveFrame}
             {onSelectFrame}
             {onAddFrame}
             {onChangeFrameDuration}
