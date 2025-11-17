@@ -6,6 +6,7 @@
     import SolarCopyBoldDuotone from "~icons/solar/copy-bold-duotone";
     import SolarTrashBin2BoldDuotone from "~icons/solar/trash-bin-2-bold-duotone";
     import SolarMirrorLeftBold from "~icons/solar/mirror-left-bold";
+    import SolarVideoFrameReplaceLineDuotone from "~icons/solar/video-frame-replace-line-duotone";
     import type { RgbColor } from "$lib/types/color";
     import {
         FACE_PANEL_COUNT,
@@ -22,6 +23,7 @@
 
     interface Props {
         frame: FaceFrame;
+        previousFrame?: FaceFrame;
 
         onDelete: VoidFunction;
         onDuplicate: VoidFunction;
@@ -37,6 +39,7 @@
 
     const {
         frame,
+        previousFrame,
         onChangePixels: setFramePixelsRoot,
         onDuplicate,
         onDelete,
@@ -48,8 +51,9 @@
     let pixels = $state(createEmptyPixels());
     let paintColor: RgbColor = $state({ r: 255, g: 0, b: 0, a: 1 });
     let paintSize = $state(1);
-    let mirror = $state(false);
+    let mirror = $state(true);
     let erase = $state(false);
+    let showPreviousOutline = $state(true);
 
     let facesContainer: HTMLDivElement | undefined = $state();
     let panningContainer: HTMLDivElement | undefined = $state();
@@ -58,13 +62,32 @@
 
     // Copy the pixels from the frame when they change
     watch(
-        () => frame,
-        (frame) => {
-            console.log(frame, faceCanvases);
-
+        () => ({ frame, previousFrame, showPreviousOutline }),
+        ({ frame, previousFrame, showPreviousOutline }) => {
             for (const { canvas, ctx } of faceCanvases) {
                 ctx.fillStyle = "black";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            if (showPreviousOutline && previousFrame) {
+                for (let i = 0; i < previousFrame.pixels.length; i += 1) {
+                    const [r, g, b] = previousFrame.pixels[i];
+
+                    const row = i / FACE_PANEL_TOTAL_WIDTH;
+                    const col = i % FACE_PANEL_TOTAL_WIDTH;
+                    const secondFace = col >= FACE_PANEL_WIDTH;
+
+                    const face = faceCanvases[secondFace ? 1 : 0];
+
+                    drawLEDOutline(
+                        face.ctx,
+                        col - (secondFace ? FACE_PANEL_WIDTH : 0),
+                        row,
+                        r,
+                        g,
+                        b,
+                    );
+                }
             }
 
             for (let i = 0; i < frame.pixels.length; i += 1) {
@@ -120,6 +143,28 @@
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         return { canvas, ctx };
+    }
+
+    function drawLEDOutline(
+        ctx: CanvasRenderingContext2D,
+        col: number,
+        row: number,
+        r: number,
+        g: number,
+        b: number,
+    ) {
+        row = Math.floor(row);
+        col = Math.floor(col);
+
+        const centerX = col * LED_SCALE + LED_SCALE / 2;
+        const centerY = row * LED_SCALE + LED_SCALE / 2;
+
+        ctx.strokeStyle = `rgb(${r},${g},${b})`;
+        ctx.lineWidth = 1;
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, LED_SCALE / 2 - 1, 0, Math.PI * 2);
+        ctx.stroke();
     }
 
     function drawLED(
@@ -287,6 +332,14 @@
                 onclick={() => (mirror = !mirror)}
             >
                 <SolarMirrorLeftBold />
+            </button>
+
+            <button
+                class="toolbar-button"
+                class:toolbar-button--active={showPreviousOutline}
+                onclick={() => (showPreviousOutline = !showPreviousOutline)}
+            >
+                <SolarVideoFrameReplaceLineDuotone />
             </button>
         </div>
 

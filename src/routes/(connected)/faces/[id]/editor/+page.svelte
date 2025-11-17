@@ -331,6 +331,7 @@
         >
             {#if frame}
                 <FrameEditor
+                    previousFrame={expression?.frames?.[frameIndex - 1]}
                     {frame}
                     onDelete={() => onDeleteFrame(frameIndex)}
                     onDuplicate={() => onDuplicateFrame(frameIndex)}
@@ -340,7 +341,7 @@
                         onChangePixels(frameIndex, pixels)}
                 />
             {:else}
-                Select a frame
+                <p class="select-frame">Select a frame</p>
             {/if}
         </div>
     {/if}
@@ -350,6 +351,12 @@
     .running {
         padding: 1rem;
         color: #999;
+    }
+
+    .select-frame {
+        padding: 3rem;
+        color: #fff;
+        text-align: center;
     }
 
     .container {
