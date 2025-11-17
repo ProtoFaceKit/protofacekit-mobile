@@ -17,10 +17,11 @@
         RGBAFormat,
         Scene,
         UnsignedByteType,
-        WebGLRenderer,
     } from "three";
     import { watch } from "runed";
     import { rendererContext } from "$lib/context/rendererContext.svelte";
+    import type { FaceRenderControls } from "$lib/render/faceRenderControls";
+    import faceRenderControls from "$lib/render/faceRenderControls";
 
     type Props = {
         pixels: [number, number, number][];
@@ -43,10 +44,6 @@
     let canvas: HTMLCanvasElement | undefined;
     let container: HTMLDivElement | undefined;
     let needsTextureUpdate = false;
-
-    let isDragging = false;
-    let lastInteractionTime = 0;
-    let userCameraX = 0;
 
     const faceCanvases: FaceTexture[] = [
         createFaceTexture(),
@@ -71,110 +68,6 @@
         );
         camera.position.set(0, 0.5, 2);
         return camera;
-    }
-
-    function createControls(canvas: HTMLCanvasElement) {
-        let startX = 0;
-        let startCameraX = 0;
-        let touchStartY = 0;
-        let hasMovedHorizontally = false;
-
-        const onPointerDown = (e: PointerEvent) => {
-            if (e.pointerType === "touch") return;
-            isDragging = true;
-            startX = e.clientX;
-            startCameraX = userCameraX;
-            canvas.style.cursor = "grabbing";
-        };
-
-        const onPointerMove = (e: PointerEvent) => {
-            if (!isDragging || e.pointerType === "touch") return;
-
-            const deltaX = (e.clientX - startX) * 0.01;
-            const newCameraX = startCameraX - deltaX;
-
-            // Clamp the camera position based on max angle
-            const radius = 1.5;
-            const maxX = Math.sin(MAX_CAMERA_ANGLE) * radius;
-            userCameraX = Math.max(-maxX, Math.min(maxX, newCameraX));
-
-            lastInteractionTime = Date.now();
-        };
-
-        const onPointerUp = (e: PointerEvent) => {
-            if (e.pointerType === "touch") return;
-            isDragging = false;
-            canvas.style.cursor = "grab";
-        };
-
-        // Touch event handlers
-        const onTouchStart = (e: TouchEvent) => {
-            if (e.touches.length === 1) {
-                e.preventDefault();
-                isDragging = true;
-                startX = e.touches[0].clientX;
-                startCameraX = userCameraX;
-                touchStartY = e.touches[0].clientY;
-                hasMovedHorizontally = false;
-            }
-        };
-
-        const onTouchMove = (e: TouchEvent) => {
-            if (!isDragging || e.touches.length !== 1) return;
-
-            const deltaX = e.touches[0].clientX - startX;
-            const deltaY = e.touches[0].clientY - touchStartY;
-
-            // Only prevent default if horizontal movement is greater than vertical
-            if (
-                !hasMovedHorizontally &&
-                Math.abs(deltaX) > Math.abs(deltaY) &&
-                Math.abs(deltaX) > 10
-            ) {
-                hasMovedHorizontally = true;
-            }
-
-            if (hasMovedHorizontally) {
-                e.preventDefault();
-                const adjustedDeltaX = deltaX * 0.01;
-                const newCameraX = startCameraX - adjustedDeltaX;
-
-                // Clamp the camera position based on max angle
-                const radius = 1.5;
-                const maxX = Math.sin(MAX_CAMERA_ANGLE) * radius;
-                userCameraX = Math.max(-maxX, Math.min(maxX, newCameraX));
-
-                lastInteractionTime = Date.now();
-            }
-        };
-
-        const onTouchEnd = (e: TouchEvent) => {
-            isDragging = false;
-            hasMovedHorizontally = false;
-        };
-
-        canvas.addEventListener("pointerdown", onPointerDown);
-        canvas.addEventListener("pointermove", onPointerMove);
-        canvas.addEventListener("pointerup", onPointerUp);
-        canvas.addEventListener("pointerleave", onPointerUp);
-        canvas.addEventListener("touchstart", onTouchStart, { passive: true });
-        canvas.addEventListener("touchmove", onTouchMove, { passive: false });
-        canvas.addEventListener("touchend", onTouchEnd, { passive: true });
-        canvas.addEventListener("touchcancel", onTouchEnd, { passive: true });
-
-        canvas.style.cursor = "grab";
-        // canvas.style.touchAction = "none";
-
-        return () => {
-            canvas.removeEventListener("pointerdown", onPointerDown);
-            canvas.removeEventListener("pointermove", onPointerMove);
-            canvas.removeEventListener("pointerup", onPointerUp);
-            canvas.removeEventListener("pointerleave", onPointerUp);
-            canvas.removeEventListener("touchstart", onTouchStart);
-            canvas.removeEventListener("touchmove", onTouchMove);
-            canvas.removeEventListener("touchend", onTouchEnd);
-            canvas.removeEventListener("touchcancel", onTouchEnd);
-        };
     }
 
     function createScene() {
@@ -305,10 +198,18 @@
         const ctx = canvas.getContext("2d")!;
 
         const camera = createCamera(container);
-        // const renderer = createRenderer(container);
-        const cleanupControls = disableControls
-            ? () => {}
-            : createControls(canvas);
+
+        let controls: FaceRenderControls | undefined;
+        if (!disableControls) {
+            controls = faceRenderControls({
+                canvas,
+                maxCameraAngle: MAX_CAMERA_ANGLE,
+                getCameraX() {
+                    return camera.position.x;
+                },
+            });
+        }
+
         const scene = createScene();
         createWorldLighting(scene);
         createGround(scene);
@@ -329,14 +230,17 @@
                 canvas.parentElement!.getBoundingClientRect();
 
             const pixelRatio = renderer.getPixelRatio();
-            renderer.setSize(width, height, false);
 
             camera.aspect = width / height;
             camera.updateProjectionMatrix();
 
-            // Resume auto animation 2 seconds after last interaction
-            const timeSinceInteraction = Date.now() - lastInteractionTime;
-            const shouldAutoAnimate = timeSinceInteraction > 2000;
+            let shouldAutoAnimate = true;
+            if (controls) {
+                // Resume auto animation 2 seconds after last interaction
+                const timeSinceInteraction =
+                    Date.now() - controls.lastInteractionTime;
+                shouldAutoAnimate = timeSinceInteraction > 2000;
+            }
 
             let angle = 0;
 
@@ -350,13 +254,13 @@
 
                 // Rotate the helmet to face the camera
                 helmet.rotation.y = -angle;
-            } else {
+            } else if (controls) {
                 // Use user-controlled position
-                camera.position.x = userCameraX;
+                camera.position.x = controls.userCameraX;
                 camera.position.z = 1.5;
 
                 // Calculate angle from user position
-                angle = Math.atan2(userCameraX, 1.5);
+                angle = Math.atan2(controls.userCameraX, 1.5);
                 helmet.rotation.y = -angle;
             }
 
@@ -370,6 +274,7 @@
                 needsTextureUpdate = false;
             }
 
+            renderer.setSize(width, height, false);
             renderer.render(scene, camera);
 
             // Copy framebuffer to this canvas
@@ -382,7 +287,7 @@
 
         return () => {
             if (animationId) cancelAnimationFrame(animationId);
-            cleanupControls();
+            controls?.cleanup();
         };
     });
 </script>
