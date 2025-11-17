@@ -272,7 +272,7 @@
     .frame-container.drag-over {
         cursor: grabbing;
         z-index: 10;
-        background: #4a9eff;
+        background: #622d2d;
     }
 
     .frame-container.drag-over:global(> .frame) {
@@ -280,7 +280,6 @@
         transform: scale(0.95);
         cursor: grabbing;
         z-index: 10;
-        background: #4a9eff;
     }
 
     .frames {
