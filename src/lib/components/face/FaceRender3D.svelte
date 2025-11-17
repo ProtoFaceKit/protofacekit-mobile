@@ -217,8 +217,6 @@
         const helmet = createHelmet(faceCanvases);
         scene.add(helmet);
 
-        container.appendChild(renderer.domElement);
-
         let animationId: number | undefined;
 
         const animate = () => {
@@ -228,8 +226,6 @@
 
             const { width, height } =
                 canvas.parentElement!.getBoundingClientRect();
-
-            const pixelRatio = renderer.getPixelRatio();
 
             camera.aspect = width / height;
             camera.updateProjectionMatrix();
@@ -274,13 +270,7 @@
                 needsTextureUpdate = false;
             }
 
-            renderer.setSize(width, height, false);
-            renderer.render(scene, camera);
-
-            // Copy framebuffer to this canvas
-            canvas.width = width * pixelRatio;
-            canvas.height = height * pixelRatio;
-            ctx.drawImage(renderer.domElement, 0, 0);
+            renderer.renderScene(canvas, ctx, width, height, scene, camera);
         };
 
         animate();
