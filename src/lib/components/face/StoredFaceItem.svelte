@@ -23,7 +23,7 @@
             <p class="item--name">{item.name}</p>
 
             <div class="expressions">
-                {#each [ExpressionType.IDLE, ExpressionType.TALKING] as expression (expression)}
+                {#each [ExpressionType.IDLE, ExpressionType.TALKING, ExpressionType.TOUCHED] as expression (expression)}
                     {@const totalFrames =
                         item.face.expressions[expression]?.frames?.length ?? 0}
                     <p class="expression">
@@ -91,9 +91,10 @@
 
     .expression {
         padding: 0.5rem 1rem;
+        padding: 0.5rem 1rem;
         background-color: #2a2a2a;
         border-radius: 0.5rem;
-        font-size: 0.9rem;
+        font-size: 0.8rem;
         color: #ccc;
     }
 

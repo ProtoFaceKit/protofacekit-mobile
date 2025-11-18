@@ -15,7 +15,11 @@
 
     const { face }: Props = $props();
 
-    const expressions = [ExpressionType.IDLE, ExpressionType.TALKING];
+    const expressions = [
+        ExpressionType.IDLE,
+        ExpressionType.TALKING,
+        ExpressionType.TOUCHED,
+    ];
 
     let expression: FaceExpression | undefined = $state(undefined);
 

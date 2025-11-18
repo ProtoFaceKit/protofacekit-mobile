@@ -304,6 +304,13 @@
         >
             Talking
         </button>
+        <button
+            class="expression"
+            class:expression--active={expressionType === ExpressionType.TOUCHED}
+            onclick={() => (expressionType = ExpressionType.TOUCHED)}
+        >
+            Touched
+        </button>
     </div>
 
     <div class="preview">

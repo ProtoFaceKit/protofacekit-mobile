@@ -5,11 +5,13 @@ export interface Face {
 export enum ExpressionType {
     IDLE = 0,
     TALKING = 1,
+    TOUCHED = 2,
 }
 
 export const EXPRESSION_TYPE_NAME = {
     [ExpressionType.IDLE]: "Idle",
     [ExpressionType.TALKING]: "Talking",
+    [ExpressionType.TOUCHED]: "Touched",
 };
 
 export interface FaceExpression {
