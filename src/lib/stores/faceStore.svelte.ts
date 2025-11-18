@@ -23,6 +23,9 @@ export interface FaceStore {
     /** Loaded face data */
     faces: StoredFace[];
 
+    /** Get a promise to load the stored faces */
+    load(): Promise<StoredFace[]>;
+
     /** Append a face to the store */
     appendFace: (face: StoredFace) => Promise<void>;
 
@@ -66,6 +69,16 @@ export function createFaceStore(): FaceStore {
         },
         get faces() {
             return faces;
+        },
+        load: async () => {
+            try {
+                const value = await getStoredFaces();
+                faces = value;
+                return value;
+            } catch (err) {
+                error = err;
+                throw err;
+            }
         },
         appendFace: async (face) => {
             faces = await appendStoredFace(face);

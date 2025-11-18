@@ -5,8 +5,64 @@
     import Loader from "$lib/components/Loader.svelte";
     import { toast } from "svelte-sonner";
     import { toastErrorMessage } from "$lib/utils/error";
+    import { save } from "@tauri-apps/plugin-dialog";
+    import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+    import { open } from "@tauri-apps/plugin-dialog";
+    import { v4 } from "uuid";
 
     const faceStore = faceStoreContext.get();
+
+    async function onExport() {
+        const value = await faceStore.load();
+        const encodedValue = JSON.stringify(value, null, 2);
+
+        const path = await save({
+            defaultPath: "ProtoFaceKitExport.json",
+            filters: [
+                {
+                    name: "ProtoFaceKitExport",
+                    extensions: ["json"],
+                },
+            ],
+        });
+
+        if (!path) return;
+
+        await writeTextFile(path, encodedValue);
+    }
+
+    async function onImport() {
+        const path = await open({
+            multiple: false,
+            directory: false,
+            filters: [
+                {
+                    name: "ProtoFaceKitExport",
+                    extensions: ["json"],
+                },
+            ],
+        });
+
+        if (!path) return;
+
+        const raw = await readTextFile(path);
+        const parsed = JSON.parse(raw);
+
+        if (!Array.isArray(parsed)) {
+            return;
+        }
+
+        for (const face of parsed) {
+            if (!("id" in face) || !("name" in face) || !("face" in face)) {
+                continue;
+            }
+
+            await faceStore.appendFace({
+                ...face,
+                id: v4(),
+            });
+        }
+    }
 </script>
 
 <div class="container">
@@ -17,7 +73,7 @@
         <p>Failed to load faces</p>
     {:else}
         <div class="items">
-            {#each faceStore.faces as face (face.id)}
+            {#each faceStore.faces as face, i (i + face.id)}
                 <StoredFaceItem
                     item={face}
                     onShow={() => {
@@ -40,6 +96,14 @@
     </a>
 
     <a class="btn btn--large btn--span create" href="/oneshot"> One-shot </a>
+
+    <button onclick={onExport} class="btn btn--large btn--span create">
+        Export Faces
+    </button>
+
+    <button onclick={onImport} class="btn btn--large btn--span create">
+        Import Faces
+    </button>
 </div>
 
 <style>
