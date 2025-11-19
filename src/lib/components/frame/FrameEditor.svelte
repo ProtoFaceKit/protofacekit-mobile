@@ -19,6 +19,9 @@
     import { onMount } from "svelte";
     import { createFrameEditorGestures } from "$lib/utils/frameEditorGestures";
     import ColorPicker from "svelte-awesome-color-picker";
+    import SolarUndoLeftBold from "~icons/solar/undo-left-bold";
+    import SolarUndoRightBold from "~icons/solar/undo-right-bold";
+
     const LED_SCALE = 12;
 
     interface Props {
@@ -46,6 +49,14 @@
         onToggleFullscreen,
     }: Props = $props();
 
+    interface PixelChange {
+        faceIndex: number;
+        col: number;
+        row: number;
+        previous: [number, number, number];
+        updated: [number, number, number];
+    }
+
     const setFramePixels = useDebounce(setFramePixelsRoot, 300);
 
     let pixels = $state(createEmptyPixels());
@@ -54,6 +65,14 @@
     let mirror = $state(true);
     let erase = $state(false);
     let showPreviousOutline = $state(true);
+
+    // Stack of previous changes for Undo
+    let changeStack: PixelChange[][] = $state([]);
+    // Stack of reverted changes for Redo
+    let redoStack: PixelChange[][] = $state([]);
+
+    // Current set of changes that will be pushed to changes on completes
+    let currentChangeSet: PixelChange[] = [];
 
     let facesContainer: HTMLDivElement | undefined = $state();
     let panningContainer: HTMLDivElement | undefined = $state();
@@ -188,6 +207,12 @@
         ctx.fill();
     }
 
+    function getPixelIndex(faceIndex: number, col: number, row: number) {
+        return (
+            row * FACE_PANEL_TOTAL_WIDTH + faceIndex * FACE_PANEL_WIDTH + col
+        );
+    }
+
     function paintPixel(
         faceIndex: number,
         col: number,
@@ -195,6 +220,7 @@
         r: number,
         g: number,
         b: number,
+        pushChangeSet: boolean = true,
     ) {
         if (
             col < 0 ||
@@ -204,13 +230,26 @@
         )
             return;
 
-        const pixelIndex =
-            row * FACE_PANEL_TOTAL_WIDTH + faceIndex * FACE_PANEL_WIDTH + col;
-        pixels[pixelIndex] = [r, g, b];
+        const pixelIndex = getPixelIndex(faceIndex, col, row);
+        const previous = pixels[pixelIndex];
+
+        const updated: [number, number, number] = [r, g, b];
+
+        pixels[pixelIndex] = updated;
         setFramePixels(pixels);
 
         const { ctx } = faceCanvases[faceIndex];
         drawLED(ctx, col, row, r, g, b);
+
+        if (pushChangeSet) {
+            currentChangeSet.push({
+                faceIndex,
+                col,
+                row,
+                previous,
+                updated,
+            });
+        }
     }
 
     function paintWithBrush(
@@ -243,6 +282,49 @@
         }
     }
 
+    function onRedo() {
+        const item = redoStack.pop();
+        if (!item) return;
+
+        currentChangeSet = [];
+
+        for (const change of item) {
+            const pixelIndex = getPixelIndex(
+                change.faceIndex,
+                change.col,
+                change.row,
+            );
+            const current = pixels[pixelIndex];
+            const [r, g, b] = change.updated;
+
+            paintPixel(change.faceIndex, change.col, change.row, r, g, b, true);
+        }
+
+        changeStack.push(currentChangeSet);
+        currentChangeSet = [];
+    }
+
+    function onUndo() {
+        const item = changeStack.pop();
+        if (!item) return;
+
+        for (const change of item) {
+            const [r, g, b] = change.previous;
+            paintPixel(
+                change.faceIndex,
+                change.col,
+                change.row,
+                r,
+                g,
+                b,
+                false,
+            );
+        }
+
+        // Push the item onto the "redo" stack using the current color value
+        redoStack.push(item);
+    }
+
     onMount(() => {
         if (!panningContainer || !facesContainer) return;
 
@@ -271,6 +353,16 @@
                 pinch: 10,
                 drag: 10,
             },
+            onPaintStart: () => {
+                currentChangeSet = [];
+                redoStack = [];
+            },
+            onPaintEnd: () => {
+                if (currentChangeSet.length > 0) {
+                    changeStack.push(currentChangeSet);
+                    currentChangeSet = [];
+                }
+            },
         });
 
         const container = panningContainer;
@@ -291,6 +383,16 @@
 
 <div class="container">
     <div class="actions">
+        <button
+            class="action"
+            onclick={onUndo}
+            disabled={changeStack.length < 1}
+        >
+            <SolarUndoLeftBold />
+        </button>
+        <button class="action" onclick={onRedo} disabled={redoStack.length < 1}>
+            <SolarUndoRightBold />
+        </button>
         <button class="action" onclick={onToggleFullscreen}>
             <SolarMaximizeBold />
         </button>
@@ -430,6 +532,12 @@
         color: #fff;
         border: none;
         height: 3rem;
+    }
+
+    .action:disabled {
+        background-color: #111;
+        color: #555;
+        cursor: not-allowed;
     }
 
     .toolbar {

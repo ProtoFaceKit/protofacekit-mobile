@@ -14,6 +14,9 @@ interface CreateFrameEditorGestures {
     panningContainer: HTMLElement;
 
     paint: (canvas: HTMLCanvasElement, row: number, column: number) => void;
+
+    onPaintStart: VoidFunction;
+    onPaintEnd: VoidFunction;
 }
 
 interface LastPaintedCell {
@@ -28,6 +31,8 @@ export function createFrameEditorGestures({
     wrapperContainer,
     panningContainer,
     paint,
+    onPaintStart,
+    onPaintEnd,
 }: CreateFrameEditorGestures) {
     let gesture: "paint" | "pan" | "zoom" | null = null;
     let pendingPaintTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -143,6 +148,7 @@ export function createFrameEditorGestures({
 
         if (event.target instanceof HTMLCanvasElement) {
             gesture = "paint";
+            onPaintStart();
             onMovePaint(event.target, event.clientX, event.clientY);
         } else {
             gesture = "pan";
@@ -220,6 +226,7 @@ export function createFrameEditorGestures({
                     gesture = "paint";
                     const touch = event.touches[0];
                     lastPoint = { x: touch.clientX, y: touch.clientY };
+                    onPaintStart();
                     onMovePaint(canvas, touch.clientX, touch.clientY);
                 }
             }, thresholds.draw);
@@ -282,6 +289,11 @@ export function createFrameEditorGestures({
         if (pendingPaintTimeout !== null) {
             clearTimeout(pendingPaintTimeout);
         }
+
+        if (gesture === "paint") {
+            onPaintEnd();
+        }
+
         gesture = null;
         lastPoint = null;
     }
