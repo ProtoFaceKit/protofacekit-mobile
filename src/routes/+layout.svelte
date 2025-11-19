@@ -10,6 +10,7 @@
     import { faceStoreContext } from "$lib/context/faceStoreContext.svelte";
     import { createConnectionStore } from "$lib/stores/connectionStore.svelte";
     import AppToaster from "$lib/components/AppToaster.svelte";
+    import BluetoothEnabledGuard from "$lib/components/BluetoothEnabledGuard.svelte";
 
     const { children }: LayoutProps = $props();
 
@@ -25,18 +26,20 @@
     });
 </script>
 
-<PermissionGuard>
-    {#if connectionStore.connected}
-        {@render children?.()}
-    {:else if connectionStore.connecting}
-        {#if connectionStore.connectError}
-            <DeviceConnectError onBack={connectionStore.reset} />
+<BluetoothEnabledGuard>
+    <PermissionGuard>
+        {#if connectionStore.connected}
+            {@render children?.()}
+        {:else if connectionStore.connecting}
+            {#if connectionStore.connectError}
+                <DeviceConnectError onBack={connectionStore.reset} />
+            {:else}
+                <DeviceConnecting device={connectionStore.connecting} />
+            {/if}
         {:else}
-            <DeviceConnecting device={connectionStore.connecting} />
+            <DeviceDiscovery onAttemptConnect={connectionStore.connect} />
         {/if}
-    {:else}
-        <DeviceDiscovery onAttemptConnect={connectionStore.connect} />
-    {/if}
-</PermissionGuard>
+    </PermissionGuard>
 
-<AppToaster />
+    <AppToaster />
+</BluetoothEnabledGuard>

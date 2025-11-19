@@ -85,8 +85,4 @@
     .text {
         color: #ccc;
     }
-
-    .grant {
-        padding: 1rem;
-    }
 </style>
