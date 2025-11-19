@@ -21,6 +21,7 @@
     import ColorPicker from "svelte-awesome-color-picker";
     import SolarUndoLeftBold from "~icons/solar/undo-left-bold";
     import SolarUndoRightBold from "~icons/solar/undo-right-bold";
+    import { createFrameEditorTools } from "./frameEditorTools.svelte";
 
     const LED_SCALE = 12;
 
@@ -58,13 +59,9 @@
     }
 
     const setFramePixels = useDebounce(setFramePixelsRoot, 300);
+    const tools = createFrameEditorTools();
 
     let pixels = $state(createEmptyPixels());
-    let paintColor: RgbColor = $state({ r: 255, g: 0, b: 0, a: 1 });
-    let paintSize = $state(1);
-    let mirror = $state(true);
-    let erase = $state(false);
-    let showPreviousOutline = $state(true);
 
     // Stack of previous changes for Undo
     let changeStack: PixelChange[][] = $state([]);
@@ -78,6 +75,8 @@
     let panningContainer: HTMLDivElement | undefined = $state();
 
     const faceCanvases: FaceCanvas[] = [createFaceCanvas(), createFaceCanvas()];
+
+    const showPreviousOutline = $derived(tools.showPreviousOutline);
 
     // Copy the pixels from the frame when they change
     watch(
@@ -257,8 +256,10 @@
         centerCol: number,
         centerRow: number,
     ) {
-        const { r, g, b } = erase ? { r: 0, g: 0, b: 0 } : paintColor;
-        const radius = (paintSize - 1) / 2;
+        const { r, g, b } = tools.erase
+            ? { r: 0, g: 0, b: 0 }
+            : tools.paintColor;
+        const radius = (tools.paintSize - 1) / 2;
         const radiusCeil = Math.ceil(radius);
 
         for (let dy = -radiusCeil; dy <= radiusCeil; dy++) {
@@ -272,7 +273,7 @@
                     // Add 0.5 to include edge pixels
                     paintPixel(faceIndex, col, row, r, g, b);
 
-                    if (mirror) {
+                    if (tools.mirror) {
                         const otherIndex = faceIndex === 0 ? 1 : 0;
                         const otherCol = FACE_PANEL_WIDTH - 1 - col;
                         paintPixel(otherIndex, otherCol, row, r, g, b);
@@ -412,16 +413,16 @@
         <div class="toolbar-group">
             <button
                 class="toolbar-button"
-                class:toolbar-button--active={!erase}
-                onclick={() => (erase = false)}
+                class:toolbar-button--active={!tools.erase}
+                onclick={() => (tools.erase = false)}
             >
                 <SolarPaintRollerBoldDuotone />
             </button>
 
             <button
                 class="toolbar-button"
-                class:toolbar-button--active={erase}
-                onclick={() => (erase = true)}
+                class:toolbar-button--active={tools.erase}
+                onclick={() => (tools.erase = true)}
             >
                 <SolarEraserBoldDuotone />
             </button>
@@ -430,28 +431,29 @@
         <div class="toolbar-group">
             <button
                 class="toolbar-button"
-                class:toolbar-button--active={mirror}
-                onclick={() => (mirror = !mirror)}
+                class:toolbar-button--active={tools.mirror}
+                onclick={() => (tools.mirror = !tools.mirror)}
             >
                 <SolarMirrorLeftBold />
             </button>
 
             <button
                 class="toolbar-button"
-                class:toolbar-button--active={showPreviousOutline}
-                onclick={() => (showPreviousOutline = !showPreviousOutline)}
+                class:toolbar-button--active={tools.showPreviousOutline}
+                onclick={() =>
+                    (tools.showPreviousOutline = !tools.showPreviousOutline)}
             >
                 <SolarVideoFrameReplaceLineDuotone />
             </button>
         </div>
 
-        {#if !erase}
+        {#if !tools.erase}
             <div class="toolbar-group">
                 <div class="color-picker">
                     <ColorPicker
-                        rgb={paintColor}
+                        rgb={tools.paintColor}
                         onInput={(color) => {
-                            if (color.rgb) paintColor = color.rgb;
+                            if (color.rgb) tools.paintColor = color.rgb;
                         }}
                         position="responsive"
                         label={""}
@@ -469,7 +471,7 @@
                     type="range"
                     min="1"
                     max="10"
-                    bind:value={paintSize}
+                    bind:value={tools.paintSize}
                     class="slider"
                 />
             </div>
