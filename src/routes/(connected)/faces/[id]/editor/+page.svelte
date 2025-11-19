@@ -331,40 +331,27 @@
         />
     </div>
 
-    {#if running}
-        <div class="running">
-            <p>Pause the current animation to edit a frame</p>
-        </div>
-    {:else}
-        <div
-            class="editor"
-            class:editor--fullscreen={editorFullscreen && frame}
-        >
-            {#if frame}
-                <FrameEditor
-                    previousFrame={expression?.frames?.[frameIndex - 1]}
-                    {frame}
-                    onDelete={() => onDeleteFrame(frameIndex)}
-                    onDuplicate={() => onDuplicateFrame(frameIndex)}
-                    onToggleFullscreen={() =>
-                        (editorFullscreen = !editorFullscreen)}
-                    onChangePixels={(pixels) =>
-                        onChangePixels(frameIndex, pixels)}
-                />
-            {:else}
-                <p class="select-frame">Select a frame</p>
-            {/if}
-        </div>
-    {/if}
+    <div class="editor" class:editor--fullscreen={editorFullscreen && frame}>
+        {#if running}
+            <p class="frame-text">Stop the running animation to edit</p>
+        {:else if frame}
+            <FrameEditor
+                previousFrame={expression?.frames?.[frameIndex - 1]}
+                {frame}
+                onDelete={() => onDeleteFrame(frameIndex)}
+                onDuplicate={() => onDuplicateFrame(frameIndex)}
+                onToggleFullscreen={() =>
+                    (editorFullscreen = !editorFullscreen)}
+                onChangePixels={(pixels) => onChangePixels(frameIndex, pixels)}
+            />
+        {:else}
+            <p class="frame-text">Select a frame</p>
+        {/if}
+    </div>
 </div>
 
 <style>
-    .running {
-        padding: 1rem;
-        color: #999;
-    }
-
-    .select-frame {
+    .frame-text {
         padding: 3rem;
         color: #fff;
         text-align: center;
