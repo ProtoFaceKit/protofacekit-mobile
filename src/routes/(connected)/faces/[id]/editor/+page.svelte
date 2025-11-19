@@ -16,6 +16,7 @@
     import { toastErrorMessage } from "$lib/utils/error";
     import { sleep } from "$lib/utils/timing";
     import { watch } from "runed";
+    import { onMount } from "svelte";
     import { toast } from "svelte-sonner";
 
     const faceStore = faceStoreContext.get();
@@ -76,10 +77,16 @@
         }
     }
 
-    function onStart() {
-        userSelection = false;
-
+    function onSystemStop() {
         abort?.abort();
+        abort = undefined;
+        running = false;
+    }
+
+    function onStart() {
+        onSystemStop();
+
+        userSelection = false;
 
         abort = new AbortController();
         running = true;
@@ -92,25 +99,9 @@
     }
 
     function onStop() {
-        abort?.abort();
-        abort = undefined;
-        running = false;
+        onSystemStop();
         userSelection = true;
     }
-
-    watch(
-        () => expression,
-        () => {
-            // User selection overrides automatic playing
-            if (userSelection) return;
-
-            onStart();
-
-            return () => {
-                onStop();
-            };
-        },
-    );
 
     function onAddFrame() {
         const defaultPixelData: [number, number, number][] = Array.from(
@@ -266,6 +257,15 @@
             saving = false;
         }
     }
+
+    function onChangeExpression(value: ExpressionType) {
+        expressionType = value;
+        frameIndex = 0;
+
+        if (running) {
+            onStart();
+        }
+    }
 </script>
 
 <div class="container">
@@ -293,21 +293,21 @@
         <button
             class="expression"
             class:expression--active={expressionType === ExpressionType.IDLE}
-            onclick={() => (expressionType = ExpressionType.IDLE)}
+            onclick={() => onChangeExpression(ExpressionType.IDLE)}
         >
             Idle
         </button>
         <button
             class="expression"
             class:expression--active={expressionType === ExpressionType.TALKING}
-            onclick={() => (expressionType = ExpressionType.TALKING)}
+            onclick={() => onChangeExpression(ExpressionType.TALKING)}
         >
             Talking
         </button>
         <button
             class="expression"
             class:expression--active={expressionType === ExpressionType.TOUCHED}
-            onclick={() => (expressionType = ExpressionType.TOUCHED)}
+            onclick={() => onChangeExpression(ExpressionType.TOUCHED)}
         >
             Touched
         </button>
