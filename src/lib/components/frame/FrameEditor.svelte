@@ -44,7 +44,7 @@
     const {
         frame,
         previousFrame,
-        onChangePixels: setFramePixelsRoot,
+        onChangePixels,
         onDuplicate,
         onDelete,
         onToggleFullscreen,
@@ -58,7 +58,6 @@
         updated: [number, number, number];
     }
 
-    const setFramePixels = useDebounce(setFramePixelsRoot, 300);
     const tools = createFrameEditorTools();
 
     let pixels = $state(createEmptyPixels());
@@ -78,38 +77,24 @@
 
     const showPreviousOutline = $derived(tools.showPreviousOutline);
 
-    // Copy the pixels from the frame when they change
-    watch(
-        () => ({ frame, previousFrame, showPreviousOutline }),
-        ({ frame, previousFrame, showPreviousOutline }) => {
-            for (const { canvas, ctx } of faceCanvases) {
-                ctx.fillStyle = "black";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
+    const savePixelData = useDebounce(() => {
+        onChangePixels(pixels);
+    }, 300);
 
-            if (showPreviousOutline && previousFrame) {
-                for (let i = 0; i < previousFrame.pixels.length; i += 1) {
-                    const [r, g, b] = previousFrame.pixels[i];
+    function updateCanvasPixels(
+        currentPixels: [number, number, number][],
+        showPreviousOutline: boolean,
+        previousPixels?: [number, number, number][],
+    ) {
+        // Clear canvas
+        for (const { canvas, ctx } of faceCanvases) {
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
 
-                    const row = i / FACE_PANEL_TOTAL_WIDTH;
-                    const col = i % FACE_PANEL_TOTAL_WIDTH;
-                    const secondFace = col >= FACE_PANEL_WIDTH;
-
-                    const face = faceCanvases[secondFace ? 1 : 0];
-
-                    drawLEDOutline(
-                        face.ctx,
-                        col - (secondFace ? FACE_PANEL_WIDTH : 0),
-                        row,
-                        r,
-                        g,
-                        b,
-                    );
-                }
-            }
-
-            for (let i = 0; i < frame.pixels.length; i += 1) {
-                const [r, g, b] = frame.pixels[i];
+        if (showPreviousOutline && previousPixels) {
+            for (let i = 0; i < previousPixels.length; i += 1) {
+                const [r, g, b] = previousPixels[i];
 
                 const row = i / FACE_PANEL_TOTAL_WIDTH;
                 const col = i % FACE_PANEL_TOTAL_WIDTH;
@@ -117,7 +102,7 @@
 
                 const face = faceCanvases[secondFace ? 1 : 0];
 
-                drawLED(
+                drawLEDOutline(
                     face.ctx,
                     col - (secondFace ? FACE_PANEL_WIDTH : 0),
                     row,
@@ -126,7 +111,37 @@
                     b,
                 );
             }
+        }
 
+        for (let i = 0; i < currentPixels.length; i += 1) {
+            const [r, g, b] = currentPixels[i];
+
+            const row = i / FACE_PANEL_TOTAL_WIDTH;
+            const col = i % FACE_PANEL_TOTAL_WIDTH;
+            const secondFace = col >= FACE_PANEL_WIDTH;
+
+            const face = faceCanvases[secondFace ? 1 : 0];
+
+            drawLED(
+                face.ctx,
+                col - (secondFace ? FACE_PANEL_WIDTH : 0),
+                row,
+                r,
+                g,
+                b,
+            );
+        }
+    }
+
+    // Copy the pixels from the frame when they change
+    watch(
+        () => ({ frame, previousFrame, showPreviousOutline }),
+        ({ frame, previousFrame, showPreviousOutline }) => {
+            updateCanvasPixels(
+                frame.pixels,
+                showPreviousOutline,
+                previousFrame?.pixels,
+            );
             pixels = frame.pixels.map(([r, g, b]) => [r, g, b]);
         },
     );
@@ -219,7 +234,6 @@
         r: number,
         g: number,
         b: number,
-        pushChangeSet: boolean = true,
     ) {
         if (
             col < 0 ||
@@ -230,25 +244,29 @@
             return;
 
         const pixelIndex = getPixelIndex(faceIndex, col, row);
-        const previous = pixels[pixelIndex];
+        const previous: [number, number, number] = pixels[pixelIndex];
+
+        // Ignore painting the same color
+        if (previous[0] === r && previous[1] === g && previous[2] === b) {
+            return;
+        }
 
         const updated: [number, number, number] = [r, g, b];
 
         pixels[pixelIndex] = updated;
-        setFramePixels(pixels);
 
         const { ctx } = faceCanvases[faceIndex];
         drawLED(ctx, col, row, r, g, b);
 
-        if (pushChangeSet) {
-            currentChangeSet.push({
-                faceIndex,
-                col,
-                row,
-                previous,
-                updated,
-            });
-        }
+        currentChangeSet.push({
+            faceIndex,
+            col,
+            row,
+            previous,
+            updated,
+        });
+
+        savePixelData();
     }
 
     function paintWithBrush(
@@ -289,41 +307,54 @@
 
         currentChangeSet = [];
 
-        for (const change of item) {
+        for (const change of item.toReversed()) {
             const pixelIndex = getPixelIndex(
                 change.faceIndex,
                 change.col,
                 change.row,
             );
-            const current = pixels[pixelIndex];
-            const [r, g, b] = change.updated;
-
-            paintPixel(change.faceIndex, change.col, change.row, r, g, b, true);
+            const previous: [number, number, number] = pixels[pixelIndex];
+            const updated: [number, number, number] = [...change.updated];
+            pixels[pixelIndex] = updated;
+            currentChangeSet.push({
+                ...change,
+                previous,
+                updated,
+            });
         }
 
         changeStack.push(currentChangeSet);
         currentChangeSet = [];
+
+        // Update the stored pixels
+        savePixelData();
+
+        // Rerender the canvas
+        updateCanvasPixels(pixels, showPreviousOutline, previousFrame?.pixels);
     }
 
     function onUndo() {
         const item = changeStack.pop();
         if (!item) return;
 
-        for (const change of item) {
-            const [r, g, b] = change.previous;
-            paintPixel(
+        for (const change of item.toReversed()) {
+            const pixelIndex = getPixelIndex(
                 change.faceIndex,
                 change.col,
                 change.row,
-                r,
-                g,
-                b,
-                false,
             );
+
+            pixels[pixelIndex] = [...change.previous];
         }
 
         // Push the item onto the "redo" stack using the current color value
         redoStack.push(item);
+
+        // Update the stored pixels
+        savePixelData();
+
+        // Rerender the canvas
+        updateCanvasPixels(pixels, showPreviousOutline, previousFrame?.pixels);
     }
 
     onMount(() => {
@@ -355,10 +386,12 @@
                 drag: 10,
             },
             onPaintStart: () => {
+                console.log("Change set started");
                 currentChangeSet = [];
                 redoStack = [];
             },
             onPaintEnd: () => {
+                console.log("Change set ended");
                 if (currentChangeSet.length > 0) {
                     changeStack.push(currentChangeSet);
                     currentChangeSet = [];
