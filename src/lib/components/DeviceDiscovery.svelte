@@ -3,7 +3,7 @@
     import { startScan, stopScan, type BleDevice } from "@mnlphlp/plugin-blec";
     import { onMount } from "svelte";
     import Device from "./Device.svelte";
-    import DiscoveryLoader from "./DiscoveryLoader.svelte";
+    import DiscoveryLoader from "$lib/components/loader/DiscoveryLoader.svelte";
 
     interface Props {
         onAttemptConnect: (device: BleDevice) => void;

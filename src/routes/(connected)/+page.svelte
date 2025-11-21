@@ -2,7 +2,7 @@
     import { writeFace } from "$lib/ble";
     import StoredFaceItem from "$lib/components/face/StoredFaceItem.svelte";
     import { faceStoreContext } from "$lib/context/faceStoreContext.svelte";
-    import Loader from "$lib/components/Loader.svelte";
+    import Loader from "$lib/components/loader/Loader.svelte";
     import { toast } from "svelte-sonner";
     import { toastErrorMessage } from "$lib/utils/error";
     import { save } from "@tauri-apps/plugin-dialog";

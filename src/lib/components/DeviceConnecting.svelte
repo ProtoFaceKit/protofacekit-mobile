@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { BleDevice } from "@mnlphlp/plugin-blec";
-    import Loader from "./Loader.svelte";
+    import Loader from "$lib/components/loader/Loader.svelte";
     import Device from "./Device.svelte";
     import icon from "$lib/assets/protofacekit.svg";
 

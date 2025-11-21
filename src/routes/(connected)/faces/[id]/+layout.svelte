@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { LayoutProps } from "./$types";
-    import Loader from "$lib/components/Loader.svelte";
+    import Loader from "$lib/components/loader/Loader.svelte";
     import { faceContext } from "$lib/context/faceContext.svelte";
     import { faceStoreContext } from "$lib/context/faceStoreContext.svelte";
 
