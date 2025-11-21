@@ -27,7 +27,11 @@
 
         <h1 class="title">Bluetooth not enabled</h1>
         <p class="text">Please enable <b>Bluetooth</b> to use this app</p>
-        <button class="btn btn--large" onclick={stateInterface.check}>
+        <button
+            class="btn btn--large"
+            onclick={stateInterface.check}
+            disabled={stateInterface.checking}
+        >
             Reload
         </button>
     </div>

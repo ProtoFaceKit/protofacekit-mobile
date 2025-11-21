@@ -13,9 +13,6 @@
 
     const { permissionInterface, children }: Props = $props();
 
-    let checkingPermissionGranted = $state(false);
-    let permissionGranted = $state(false);
-
     const checkingDebounce = new Debounced(
         () => permissionInterface.checking,
         50,
@@ -37,7 +34,7 @@
             Checking for required bluetooth access permissions...
         </p>
     </div>
-{:else if permissionGranted}
+{:else if permissionInterface.granted}
     {@render children?.()}
 {:else}
     <div class="container" transition:slide={{ delay: 10, duration: 300 }}>
@@ -48,7 +45,7 @@
         <button
             class="btn btn--large"
             onclick={permissionInterface.grant}
-            disabled={checkingPermissionGranted}
+            disabled={permissionInterface.checking}
         >
             Grant
         </button>

@@ -1,5 +1,7 @@
 import type { Preview } from "@storybook/sveltekit";
 import "../src/lib/styles/global.css";
+import StorybookDecorator from "./StorybookDecorator.svelte";
+import "./styles.css";
 
 const preview: Preview = {
     parameters: {
@@ -17,6 +19,7 @@ const preview: Preview = {
             test: "todo",
         },
     },
+    decorators: [() => StorybookDecorator],
 };
 
 export default preview;
