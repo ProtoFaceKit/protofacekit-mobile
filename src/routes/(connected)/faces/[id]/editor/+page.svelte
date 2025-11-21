@@ -16,7 +16,6 @@
     import { toastErrorMessage } from "$lib/utils/error";
     import { sleep } from "$lib/utils/timing";
     import { watch } from "runed";
-    import { onMount } from "svelte";
     import { toast } from "svelte-sonner";
 
     const faceStore = faceStoreContext.get();
@@ -50,7 +49,6 @@
     let frameIndex = $state(0);
     const frame = $derived(expression?.frames[frameIndex]);
 
-    let userSelection = $state(false);
     let running = $state(false);
     let abort: AbortController | undefined;
 
@@ -86,8 +84,6 @@
     function onStart() {
         onSystemStop();
 
-        userSelection = false;
-
         abort = new AbortController();
         running = true;
 
@@ -100,7 +96,6 @@
 
     function onStop() {
         onSystemStop();
-        userSelection = true;
     }
 
     function onAddFrame() {
@@ -147,7 +142,6 @@
 
     function onSelectFrame(index: number) {
         onStop();
-        userSelection = true;
         frameIndex = index;
     }
 

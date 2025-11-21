@@ -1,9 +1,9 @@
 <script lang="ts">
     import "$lib/styles/global.css";
     import type { LayoutProps } from "./$types";
-    import DeviceDiscovery from "$lib/components/DeviceDiscovery.svelte";
-    import DeviceConnecting from "$lib/components/DeviceConnecting.svelte";
-    import DeviceConnectError from "$lib/components/DeviceConnectError.svelte";
+    import DeviceDiscovery from "$lib/components/device/DeviceDiscovery.svelte";
+    import DeviceConnecting from "$lib/components/device/DeviceConnecting.svelte";
+    import DeviceConnectError from "$lib/components/device/DeviceConnectError.svelte";
     import PermissionGuard from "$lib/components/guards/PermissionGuard.svelte";
     import { deviceContext } from "$lib/context/deviceContext.svelte";
     import { createFaceStore } from "$lib/stores/faceStore.svelte";
