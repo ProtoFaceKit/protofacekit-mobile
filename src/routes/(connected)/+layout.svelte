@@ -3,45 +3,43 @@
     import icon from "$lib/assets/protofacekit.svg";
     import type { LayoutProps } from "./$types";
     import { toast } from "svelte-sonner";
-    import { rendererContext } from "$lib/context/rendererContext.svelte";
-    import { createSharedRenderer } from "$lib/render/sharedRenderer";
+    import SharedRendererProvider from "$lib/components/SharedRendererProvider.svelte";
 
     const context = deviceContext.get();
     const device = $derived(context.device);
 
     const { children }: LayoutProps = $props();
-
-    const renderer = createSharedRenderer(Math.min(window.devicePixelRatio, 2));
-    rendererContext.set(renderer);
 </script>
 
-<div class="view">
-    <div class="header">
-        <div class="header__text">
-            <a href="/">
-                <img src={icon} alt="Logo" height={38} />
-            </a>
+<SharedRendererProvider>
+    <div class="view">
+        <div class="header">
+            <div class="header__text">
+                <a href="/">
+                    <img src={icon} alt="Logo" height={38} />
+                </a>
 
-            <div class="device">
-                <h1 class="device__name">{device.name}</h1>
-                <p class="device__address">{device.address}</p>
+                <div class="device">
+                    <h1 class="device__name">{device.name}</h1>
+                    <p class="device__address">{device.address}</p>
+                </div>
             </div>
+            <button
+                class="btn"
+                onclick={() => {
+                    toast.loading("Disconnecting...");
+                    context.disconnect();
+                }}
+            >
+                Disconnect
+            </button>
         </div>
-        <button
-            class="btn"
-            onclick={() => {
-                toast.loading("Disconnecting...");
-                context.disconnect();
-            }}
-        >
-            Disconnect
-        </button>
-    </div>
 
-    <div class="container">
-        {@render children?.()}
+        <div class="container">
+            {@render children?.()}
+        </div>
     </div>
-</div>
+</SharedRendererProvider>
 
 <style>
     .view {
