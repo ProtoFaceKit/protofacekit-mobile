@@ -8,6 +8,12 @@ export enum ExpressionType {
     TOUCHED = 2,
 }
 
+export const ALL_EXPRESSIONS = [
+    ExpressionType.IDLE,
+    ExpressionType.TALKING,
+    ExpressionType.TOUCHED,
+];
+
 export const EXPRESSION_TYPE_NAME = {
     [ExpressionType.IDLE]: "Idle",
     [ExpressionType.TALKING]: "Talking",

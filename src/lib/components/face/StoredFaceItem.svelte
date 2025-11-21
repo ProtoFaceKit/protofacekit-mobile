@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { EXPRESSION_TYPE_NAME, ExpressionType } from "$lib/types/data";
+    import { ALL_EXPRESSIONS, EXPRESSION_TYPE_NAME } from "$lib/types/data";
     import type { StoredFace } from "$lib/types/faceStore";
     import FacePreview from "./FacePreview.svelte";
     import SolarTrashBin2BoldDuotone from "~icons/solar/trash-bin-2-bold-duotone";
@@ -23,7 +23,7 @@
             <p class="item--name">{item.name}</p>
 
             <div class="expressions">
-                {#each [ExpressionType.IDLE, ExpressionType.TALKING, ExpressionType.TOUCHED] as expression (expression)}
+                {#each ALL_EXPRESSIONS as expression (expression)}
                     {@const totalFrames =
                         item.face.expressions[expression]?.frames?.length ?? 0}
                     <p class="expression">
