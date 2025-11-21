@@ -8,7 +8,6 @@
         TimelineDraggingState,
         type TimelineDragging,
     } from "./frameTimelineDragging";
-    import { contain } from "three/src/extras/TextureUtils.js";
 
     interface Props {
         frames: FaceFrame[];

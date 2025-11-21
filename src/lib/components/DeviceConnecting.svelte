@@ -1,11 +1,9 @@
 <script lang="ts">
-    import type { BleDevice } from "@mnlphlp/plugin-blec";
     import Loader from "$lib/components/loader/Loader.svelte";
-    import Device from "./Device.svelte";
-    import icon from "$lib/assets/protofacekit.svg";
+    import type { BluetoothDevice } from "$lib/types/bluetooth";
 
     interface Props {
-        device: BleDevice;
+        device: BluetoothDevice;
     }
 
     const { device }: Props = $props();

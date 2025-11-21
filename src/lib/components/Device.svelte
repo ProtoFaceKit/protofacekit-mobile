@@ -4,12 +4,10 @@
     type Props = {
         name: string;
         address: string;
-        connected?: boolean;
-        bonded?: boolean;
         onConnect?: VoidFunction;
     };
 
-    const { name, address, connected, bonded, onConnect }: Props = $props();
+    const { name, address, onConnect }: Props = $props();
 </script>
 
 <button class="device" onclick={onConnect}>

@@ -1,45 +1,30 @@
 <script lang="ts">
-    import { checkPermissions } from "@mnlphlp/plugin-blec";
+    import type { BluetoothPermissionInterface } from "$lib/services/bluetoothPermission.svelte";
     import { Debounced } from "runed";
     import { type Snippet } from "svelte";
-    import { scale, slide } from "svelte/transition";
+    import { slide } from "svelte/transition";
     import SolarBluetoothCircleBroken from "~icons/solar/bluetooth-circle-broken";
     import SolarBluetoothCircleLinear from "~icons/solar/bluetooth-circle-linear";
 
     type Props = {
+        permissionInterface: BluetoothPermissionInterface;
         children?: Snippet;
     };
 
-    const { children }: Props = $props();
+    const { permissionInterface, children }: Props = $props();
 
     let checkingPermissionGranted = $state(false);
     let permissionGranted = $state(false);
 
-    const checkingDebounce = new Debounced(() => checkingPermissionGranted, 50);
-
-    async function tryCheckPermission(grant: boolean, abort?: AbortController) {
-        checkingPermissionGranted = true;
-        try {
-            const granted = await checkPermissions(grant);
-            if (abort?.signal?.aborted) return;
-            permissionGranted = granted;
-        } catch (err) {
-            console.error("failed to check permissions", err);
-        } finally {
-            if (abort?.signal?.aborted) return;
-            checkingPermissionGranted = false;
-        }
-    }
+    const checkingDebounce = new Debounced(
+        () => permissionInterface.checking,
+        50,
+    );
 
     $effect(() => {
-        const abort = new AbortController();
-
-        checkingPermissionGranted = true;
-        tryCheckPermission(false, abort);
-
+        permissionInterface.check();
         return () => {
-            abort.abort();
-            checkingPermissionGranted = false;
+            permissionInterface.cancel();
         };
     });
 </script>
@@ -62,7 +47,7 @@
         <p class="text">Please grant required permissions</p>
         <button
             class="btn btn--large"
-            onclick={() => tryCheckPermission(true)}
+            onclick={permissionInterface.grant}
             disabled={checkingPermissionGranted}
         >
             Grant

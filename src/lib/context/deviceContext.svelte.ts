@@ -1,8 +1,8 @@
-import type { BleDevice } from "@mnlphlp/plugin-blec";
+import type { BluetoothDevice } from "$lib/types/bluetooth";
 import { Context } from "runed";
 
 interface DeviceContext {
-    device: BleDevice;
+    device: BluetoothDevice;
     disconnect: VoidFunction;
 }
 

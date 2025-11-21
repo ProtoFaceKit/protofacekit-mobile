@@ -1,25 +1,27 @@
-import { connect, disconnect, type BleDevice } from "@mnlphlp/plugin-blec";
+import type { BluetoothDevice } from "$lib/types/bluetooth";
+import {
+    connect as connectBle,
+    disconnect as disconnectBle,
+} from "@mnlphlp/plugin-blec";
 
-export interface ConnectionStore {
-    connecting: BleDevice | undefined;
-    connected: BleDevice | undefined;
-
+export interface BluetoothConnectionInterface {
+    connecting: BluetoothDevice | undefined;
+    connected: BluetoothDevice | undefined;
     connectError: unknown | undefined;
 
-    connect: (device: BleDevice) => Promise<void>;
+    connect: (device: BluetoothDevice) => Promise<void>;
     disconnect: VoidFunction;
     reset: VoidFunction;
 }
 
-export function createConnectionStore(): ConnectionStore {
-    let connecting: BleDevice | undefined = $state();
-    let connected: BleDevice | undefined = $state();
-
+export function createBluetoothConnectionInterface(): BluetoothConnectionInterface {
+    let connecting: BluetoothDevice | undefined = $state();
+    let connected: BluetoothDevice | undefined = $state();
     let connectError: unknown = $state();
 
     let onDisconnectHandler: VoidFunction = () => {};
 
-    async function onAttemptConnect(device: BleDevice) {
+    async function connect(device: BluetoothDevice) {
         if (connecting !== undefined) return;
 
         connecting = device;
@@ -30,7 +32,7 @@ export function createConnectionStore(): ConnectionStore {
         };
 
         try {
-            await connect(device.address, () => {
+            await connectBle(device.address, () => {
                 if (!isCurrent) return;
 
                 connected = undefined;
@@ -44,10 +46,10 @@ export function createConnectionStore(): ConnectionStore {
         }
     }
 
-    function onDisconnect() {
+    function disconnect() {
         if (!connected) return;
         connected = undefined;
-        disconnect().then(onDisconnectHandler);
+        disconnectBle().then(onDisconnectHandler).catch(console.error);
     }
 
     return {
@@ -60,10 +62,10 @@ export function createConnectionStore(): ConnectionStore {
         get connectError() {
             return connectError;
         },
-        connect: onAttemptConnect,
-        disconnect: onDisconnect,
+        connect,
+        disconnect,
         reset: () => {
-            onDisconnect();
+            disconnect();
             connecting = undefined;
             connected = undefined;
             connectError = undefined;

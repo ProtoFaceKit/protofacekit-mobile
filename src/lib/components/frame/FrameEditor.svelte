@@ -7,9 +7,7 @@
     import SolarTrashBin2BoldDuotone from "~icons/solar/trash-bin-2-bold-duotone";
     import SolarMirrorLeftBold from "~icons/solar/mirror-left-bold";
     import SolarVideoFrameReplaceLineDuotone from "~icons/solar/video-frame-replace-line-duotone";
-    import type { RgbColor } from "$lib/types/color";
     import {
-        FACE_PANEL_COUNT,
         FACE_PANEL_HEIGHT,
         FACE_PANEL_TOTAL_PIXELS,
         FACE_PANEL_TOTAL_WIDTH,

@@ -1,64 +1,31 @@
 <script lang="ts">
-    import { CONTROLLER_SERVICE_ID } from "$lib/ble";
-    import { startScan, stopScan, type BleDevice } from "@mnlphlp/plugin-blec";
     import { onMount } from "svelte";
     import Device from "./Device.svelte";
     import DiscoveryLoader from "$lib/components/loader/DiscoveryLoader.svelte";
+    import type { BluetoothDevice } from "$lib/types/bluetooth";
+    import type { BluetoothScanningInterface } from "$lib/services/bluetoothScanning.svelte";
 
     interface Props {
-        onAttemptConnect: (device: BleDevice) => void;
+        /** Interface for interacting with the bluetooth scanner */
+        scanningInterface: BluetoothScanningInterface;
+
+        /** Callback to connect to a device */
+        onAttemptConnect: (device: BluetoothDevice) => void;
     }
 
-    const { onAttemptConnect }: Props = $props();
-
-    // 10s worth of device scanning
-    const DEVICE_SCAN_TIMEOUT = 10_000;
-
-    // Devices that have been discovered
-    let discovered: BleDevice[] = $state([]);
-
-    // Scanning state
-    let scanning = $state(false);
-
-    function onScan(abort: AbortController) {
-        scanning = true;
-
-        startScan((devices) => {
-            if (abort.signal.aborted) return;
-
-            discovered = devices
-                // Only include devices with the desired service
-                .filter((device) =>
-                    device.services.includes(CONTROLLER_SERVICE_ID),
-                );
-        }, DEVICE_SCAN_TIMEOUT);
-
-        const scanTimeout = setTimeout(() => {
-            if (abort.signal.aborted) return;
-            scanning = false;
-        }, DEVICE_SCAN_TIMEOUT);
-
-        abort.signal.addEventListener("abort", () => {
-            clearTimeout(scanTimeout);
-        });
-    }
+    const { scanningInterface, onAttemptConnect }: Props = $props();
 
     onMount(() => {
-        const abort = new AbortController();
-
-        onScan(abort);
+        scanningInterface.startScan();
 
         return () => {
-            stopScan();
-            abort.abort();
+            scanningInterface.stopScan();
         };
     });
 
     function onReScan() {
-        if (scanning) return;
-
-        const abort = new AbortController();
-        onScan(abort);
+        if (scanningInterface.devicesLoading) return;
+        scanningInterface.startScan();
     }
 </script>
 
@@ -66,18 +33,16 @@
     <h1 class="title">Lets find that Protogen...</h1>
 
     <div class="devices">
-        {#each discovered as device, i (i)}
+        {#each scanningInterface.devices as device, i (i)}
             <Device
                 name={device.name}
                 address={device.address}
-                connected={device.isConnected}
-                bonded={device.isBonded}
                 onConnect={() => onAttemptConnect(device)}
             />
         {/each}
     </div>
 
-    {#if scanning}
+    {#if scanningInterface.devicesLoading}
         <div class="scanning">
             <DiscoveryLoader />
             <p class="scanning__text">Searching for devices...</p>
@@ -85,7 +50,7 @@
     {:else}
         <button class="scan-again" onclick={onReScan}>Scan Again</button>
 
-        {#if discovered.length < 1}
+        {#if scanningInterface.devices.length < 1}
             <p>No devices found...</p>
         {/if}
     {/if}
