@@ -23,9 +23,10 @@
     import type { FaceRenderControls } from "$lib/render/faceRenderControls";
     import faceRenderControls from "$lib/render/faceRenderControls";
     import { FACE_PANEL_HEIGHT, FACE_PANEL_WIDTH } from "$lib/constants";
+    import type { Pixel } from "$lib/types/data";
 
     type Props = {
-        pixels: [number, number, number][];
+        pixels: Pixel[];
         disableControls?: boolean;
     };
 

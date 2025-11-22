@@ -11,6 +11,7 @@
         type Face,
         type FaceExpression,
         type FaceFrame,
+        type Pixel,
     } from "$lib/types/data";
     import { deepClone } from "$lib/utils/clone";
     import { toastErrorMessage } from "$lib/utils/error";
@@ -99,7 +100,7 @@
     }
 
     function onAddFrame() {
-        const defaultPixelData: [number, number, number][] = Array.from(
+        const defaultPixelData: Pixel[] = Array.from(
             { length: FACE_PANEL_TOTAL_PIXELS },
             () => [0, 0, 0],
         );
@@ -206,7 +207,7 @@
         };
     }
 
-    function onChangePixels(index: number, pixels: [number, number, number][]) {
+    function onChangePixels(index: number, pixels: Pixel[]) {
         const currentFrames = face.expressions[expressionType]?.frames ?? [];
         face = {
             ...face,

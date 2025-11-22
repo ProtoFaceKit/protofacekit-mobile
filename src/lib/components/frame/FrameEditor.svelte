@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { FaceFrame } from "$lib/types/data";
+    import type { FaceFrame, Pixel } from "$lib/types/data";
     import SolarPaintRollerBoldDuotone from "~icons/solar/paint-roller-bold-duotone";
     import SolarEraserBoldDuotone from "~icons/solar/eraser-bold-duotone";
     import SolarMaximizeBold from "~icons/solar/maximize-bold";
@@ -20,6 +20,7 @@
     import SolarUndoLeftBold from "~icons/solar/undo-left-bold";
     import SolarUndoRightBold from "~icons/solar/undo-right-bold";
     import { createFrameEditorTools } from "./frameEditorTools.svelte";
+    import { createFrameEditorHistory } from "$lib/stores/frameEditorHistory.svelte";
 
     const LED_SCALE = 12;
 
@@ -31,7 +32,7 @@
         onDuplicate: VoidFunction;
         onToggleFullscreen: VoidFunction;
 
-        onChangePixels: (pixels: [number, number, number][]) => void;
+        onChangePixels: (pixels: Pixel[]) => void;
     }
 
     interface FaceCanvas {
@@ -48,25 +49,11 @@
         onToggleFullscreen,
     }: Props = $props();
 
-    interface PixelChange {
-        faceIndex: number;
-        col: number;
-        row: number;
-        previous: [number, number, number];
-        updated: [number, number, number];
-    }
+    const BLACK_PIXEL: Pixel = [0, 0, 0];
 
     const tools = createFrameEditorTools();
 
     let pixels = $state(createEmptyPixels());
-
-    // Stack of previous changes for Undo
-    let changeStack: PixelChange[][] = $state([]);
-    // Stack of reverted changes for Redo
-    let redoStack: PixelChange[][] = $state([]);
-
-    // Current set of changes that will be pushed to changes on completes
-    let currentChangeSet: PixelChange[] = [];
 
     let facesContainer: HTMLDivElement | undefined = $state();
     let panningContainer: HTMLDivElement | undefined = $state();
@@ -75,14 +62,16 @@
 
     const showPreviousOutline = $derived(tools.showPreviousOutline);
 
+    const history = createFrameEditorHistory();
+
     const savePixelData = useDebounce(() => {
         onChangePixels(pixels);
     }, 300);
 
     function updateCanvasPixels(
-        currentPixels: [number, number, number][],
+        currentPixels: Pixel[],
         showPreviousOutline: boolean,
-        previousPixels?: [number, number, number][],
+        previousPixels?: Pixel[],
     ) {
         // Clear canvas
         for (const { canvas, ctx } of faceCanvases) {
@@ -92,7 +81,7 @@
 
         if (showPreviousOutline && previousPixels) {
             for (let i = 0; i < previousPixels.length; i += 1) {
-                const [r, g, b] = previousPixels[i];
+                const pixel = previousPixels[i];
 
                 const row = i / FACE_PANEL_TOTAL_WIDTH;
                 const col = i % FACE_PANEL_TOTAL_WIDTH;
@@ -104,15 +93,13 @@
                     face.ctx,
                     col - (secondFace ? FACE_PANEL_WIDTH : 0),
                     row,
-                    r,
-                    g,
-                    b,
+                    pixel,
                 );
             }
         }
 
         for (let i = 0; i < currentPixels.length; i += 1) {
-            const [r, g, b] = currentPixels[i];
+            const pixel = currentPixels[i];
 
             const row = i / FACE_PANEL_TOTAL_WIDTH;
             const col = i % FACE_PANEL_TOTAL_WIDTH;
@@ -124,9 +111,7 @@
                 face.ctx,
                 col - (secondFace ? FACE_PANEL_WIDTH : 0),
                 row,
-                r,
-                g,
-                b,
+                pixel,
             );
         }
     }
@@ -144,8 +129,8 @@
         },
     );
 
-    function createEmptyPixels(): [number, number, number][] {
-        const pixels: [number, number, number][] = Array.from(
+    function createEmptyPixels(): Pixel[] {
+        const pixels: Pixel[] = Array.from(
             { length: FACE_PANEL_TOTAL_PIXELS },
             () => [0, 0, 0],
         );
@@ -180,9 +165,7 @@
         ctx: CanvasRenderingContext2D,
         col: number,
         row: number,
-        r: number,
-        g: number,
-        b: number,
+        pixel: Pixel,
     ) {
         row = Math.floor(row);
         col = Math.floor(col);
@@ -190,7 +173,7 @@
         const centerX = col * LED_SCALE + LED_SCALE / 2;
         const centerY = row * LED_SCALE + LED_SCALE / 2;
 
-        ctx.strokeStyle = `rgb(${r},${g},${b})`;
+        ctx.strokeStyle = `rgb(${pixel[0]},${pixel[1]},${pixel[2]})`;
         ctx.lineWidth = 1;
 
         ctx.beginPath();
@@ -202,9 +185,7 @@
         ctx: CanvasRenderingContext2D,
         col: number,
         row: number,
-        r: number,
-        g: number,
-        b: number,
+        pixel: Pixel,
     ) {
         row = Math.floor(row);
         col = Math.floor(col);
@@ -212,7 +193,7 @@
         const centerX = col * LED_SCALE + LED_SCALE / 2;
         const centerY = row * LED_SCALE + LED_SCALE / 2;
 
-        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillStyle = `rgb(${pixel[0]},${pixel[1]},${pixel[2]})`;
 
         ctx.beginPath();
         ctx.arc(centerX, centerY, LED_SCALE / 2 - 1, 0, Math.PI * 2);
@@ -229,40 +210,35 @@
         faceIndex: number,
         col: number,
         row: number,
-        r: number,
-        g: number,
-        b: number,
+        pixel: Pixel,
     ) {
         if (
             col < 0 ||
             col >= FACE_PANEL_WIDTH ||
             row < 0 ||
             row >= FACE_PANEL_HEIGHT
-        )
-            return;
-
-        const pixelIndex = getPixelIndex(faceIndex, col, row);
-        const previous: [number, number, number] = pixels[pixelIndex];
-
-        // Ignore painting the same color
-        if (previous[0] === r && previous[1] === g && previous[2] === b) {
+        ) {
             return;
         }
 
-        const updated: [number, number, number] = [r, g, b];
+        const pixelIndex = getPixelIndex(faceIndex, col, row);
+        const previous: Pixel = pixels[pixelIndex];
 
-        pixels[pixelIndex] = updated;
+        // Ignore painting the same color
+        if (
+            previous[0] === pixel[0] &&
+            previous[1] === pixel[1] &&
+            previous[2] === pixel[2]
+        ) {
+            return;
+        }
+
+        pixels[pixelIndex] = pixel;
 
         const { ctx } = faceCanvases[faceIndex];
-        drawLED(ctx, col, row, r, g, b);
+        drawLED(ctx, col, row, pixel);
 
-        currentChangeSet.push({
-            faceIndex,
-            col,
-            row,
-            previous,
-            updated,
-        });
+        history.pushChange(pixelIndex, previous, pixel);
 
         savePixelData();
     }
@@ -272,9 +248,7 @@
         centerCol: number,
         centerRow: number,
     ) {
-        const { r, g, b } = tools.erase
-            ? { r: 0, g: 0, b: 0 }
-            : tools.paintColor;
+        const pixel = tools.erase ? BLACK_PIXEL : tools.pixelColor;
         const radius = (tools.paintSize - 1) / 2;
         const radiusCeil = Math.ceil(radius);
 
@@ -287,12 +261,12 @@
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 if (distance <= radius + 0.5) {
                     // Add 0.5 to include edge pixels
-                    paintPixel(faceIndex, col, row, r, g, b);
+                    paintPixel(faceIndex, col, row, pixel);
 
                     if (tools.mirror) {
                         const otherIndex = faceIndex === 0 ? 1 : 0;
                         const otherCol = FACE_PANEL_WIDTH - 1 - col;
-                        paintPixel(otherIndex, otherCol, row, r, g, b);
+                        paintPixel(otherIndex, otherCol, row, pixel);
                     }
                 }
             }
@@ -300,29 +274,8 @@
     }
 
     function onRedo() {
-        const item = redoStack.pop();
-        if (!item) return;
-
-        currentChangeSet = [];
-
-        for (const change of item.toReversed()) {
-            const pixelIndex = getPixelIndex(
-                change.faceIndex,
-                change.col,
-                change.row,
-            );
-            const previous: [number, number, number] = pixels[pixelIndex];
-            const updated: [number, number, number] = [...change.updated];
-            pixels[pixelIndex] = updated;
-            currentChangeSet.push({
-                ...change,
-                previous,
-                updated,
-            });
-        }
-
-        changeStack.push(currentChangeSet);
-        currentChangeSet = [];
+        // Perform a redo on the pixels
+        history.redo(pixels);
 
         // Update the stored pixels
         savePixelData();
@@ -332,21 +285,8 @@
     }
 
     function onUndo() {
-        const item = changeStack.pop();
-        if (!item) return;
-
-        for (const change of item.toReversed()) {
-            const pixelIndex = getPixelIndex(
-                change.faceIndex,
-                change.col,
-                change.row,
-            );
-
-            pixels[pixelIndex] = [...change.previous];
-        }
-
-        // Push the item onto the "redo" stack using the current color value
-        redoStack.push(item);
+        // Perform and undo on the pixels
+        history.undo(pixels);
 
         // Update the stored pixels
         savePixelData();
@@ -384,16 +324,10 @@
                 drag: 10,
             },
             onPaintStart: () => {
-                console.log("Change set started");
-                currentChangeSet = [];
-                redoStack = [];
+                history.beginChangeSet();
             },
             onPaintEnd: () => {
-                console.log("Change set ended");
-                if (currentChangeSet.length > 0) {
-                    changeStack.push(currentChangeSet);
-                    currentChangeSet = [];
-                }
+                history.endChangeSet();
             },
         });
 
@@ -415,14 +349,10 @@
 
 <div class="container">
     <div class="actions">
-        <button
-            class="action"
-            onclick={onUndo}
-            disabled={changeStack.length < 1}
-        >
+        <button class="action" onclick={onUndo} disabled={!history.undoEnabled}>
             <SolarUndoLeftBold />
         </button>
-        <button class="action" onclick={onRedo} disabled={redoStack.length < 1}>
+        <button class="action" onclick={onRedo} disabled={!history.redoEnabled}>
             <SolarUndoRightBold />
         </button>
         <button class="action" onclick={onToggleFullscreen}>

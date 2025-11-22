@@ -1,4 +1,5 @@
 import type { RgbColor } from "$lib/types/color";
+import type { Pixel } from "$lib/types/data";
 
 interface FrameEditorTools {
     paintColor: RgbColor;
@@ -6,6 +7,10 @@ interface FrameEditorTools {
     mirror: boolean;
     erase: boolean;
     showPreviousOutline: boolean;
+}
+
+interface FrameEditorToolsData extends FrameEditorTools {
+    pixelColor: Pixel;
 }
 
 const LOCAL_STORAGE_KEY = "editor-tools-state";
@@ -17,8 +22,13 @@ const DEFAULT_STATE: FrameEditorTools = {
     showPreviousOutline: true,
 };
 
-export function createFrameEditorTools(): FrameEditorTools {
+export function createFrameEditorTools(): FrameEditorToolsData {
     const tools: FrameEditorTools = $state(getStoredValue());
+
+    const pixelColor: Pixel = $derived.by(() => {
+        const { r, g, b } = tools.paintColor;
+        return [r, g, b];
+    });
 
     function getStoredValue(): FrameEditorTools {
         const value = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -33,6 +43,9 @@ export function createFrameEditorTools(): FrameEditorTools {
     return {
         get paintColor() {
             return tools.paintColor;
+        },
+        get pixelColor() {
+            return pixelColor;
         },
         set paintColor(value) {
             tools.paintColor = value;

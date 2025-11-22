@@ -25,6 +25,13 @@ export interface FaceExpression {
 }
 
 export interface FaceFrame {
-    pixels: [number, number, number][];
+    pixels: Pixel[];
     duration: number;
 }
+
+/**
+ * RGB pixel values (0-255), the pixel itself should be
+ * considered always immutable instead the outer pixels
+ * array should be changed to replace a pixel
+ */
+export type Pixel = readonly [number, number, number];
