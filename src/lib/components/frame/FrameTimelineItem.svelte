@@ -1,3 +1,33 @@
+<script lang="ts" module>
+    // Shared IntersectionObserver for all frame instances
+    let sharedObserver: IntersectionObserver | null = null;
+    const observedElements = new Map<
+        Element,
+        (isIntersecting: boolean) => void
+    >();
+
+    function getSharedObserver(): IntersectionObserver {
+        if (!sharedObserver) {
+            sharedObserver = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((entry) => {
+                        const callback = observedElements.get(entry.target);
+                        if (callback) {
+                            callback(entry.isIntersecting);
+                        }
+                    });
+                },
+                {
+                    threshold: 0.1,
+                    rootMargin: "50px",
+                },
+            );
+        }
+
+        return sharedObserver;
+    }
+</script>
+
 <script lang="ts">
     import type { FaceFrame } from "$lib/types/data";
     import FaceRender3D from "../face/FaceRender3D.svelte";
@@ -11,11 +41,34 @@
     }
 
     const { frame, active, onSelect, onChangeDuration }: Props = $props();
+
+    let isWithinViewport = $state(false);
+
+    // Use action instead of bind:this
+    function observeViewport(node: HTMLElement) {
+        const observer = getSharedObserver();
+
+        // Register callback for this element
+        observedElements.set(node, (isIntersecting) => {
+            isWithinViewport = isIntersecting;
+        });
+
+        observer.observe(node);
+
+        return {
+            destroy() {
+                observer.unobserve(node);
+                observedElements.delete(node);
+            },
+        };
+    }
 </script>
 
-<div class="frame" class:frame--active={active}>
+<div class="frame" class:frame--active={active} use:observeViewport>
     <button class="preview" onclick={onSelect}>
-        <FaceRender3D pixels={frame.pixels} disableControls />
+        {#if isWithinViewport}
+            <FaceRender3D pixels={frame.pixels} disableControls />
+        {/if}
     </button>
 
     <div class="duration">
