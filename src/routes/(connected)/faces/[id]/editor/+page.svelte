@@ -329,15 +329,18 @@
         {#if running}
             <p class="frame-text">Stop the running animation to edit</p>
         {:else if frame}
-            <FrameEditor
-                previousFrame={expression?.frames?.[frameIndex - 1]}
-                {frame}
-                onDelete={() => onDeleteFrame(frameIndex)}
-                onDuplicate={() => onDuplicateFrame(frameIndex)}
-                onToggleFullscreen={() =>
-                    (editorFullscreen = !editorFullscreen)}
-                onChangePixels={(pixels) => onChangePixels(frameIndex, pixels)}
-            />
+            {#key `${expressionType}:${frameIndex}`}
+                <FrameEditor
+                    previousFrame={expression?.frames?.[frameIndex - 1]}
+                    {frame}
+                    onDelete={() => onDeleteFrame(frameIndex)}
+                    onDuplicate={() => onDuplicateFrame(frameIndex)}
+                    onToggleFullscreen={() =>
+                        (editorFullscreen = !editorFullscreen)}
+                    onChangePixels={(pixels) =>
+                        onChangePixels(frameIndex, pixels)}
+                />
+            {/key}
         {:else}
             <p class="frame-text">Select a frame</p>
         {/if}
