@@ -1,5 +1,5 @@
 import { send } from "@mnlphlp/plugin-blec";
-import { ExpressionType, type Face } from "$lib/types/data";
+import { ExpressionType, type Face, type Pixel } from "$lib/types/data";
 
 export const CONTROLLER_SERVICE_ID = "bd6f7967-023c-4f0b-aad4-16a8a116f62c";
 
@@ -29,28 +29,35 @@ export async function writeFace(face: Face) {
         );
 
         for (const frame of expression.frames) {
-            if (frame.duration > 255 || frame.duration < 1) {
-                throw new Error("invalid frame duration");
-            }
+            let duration = frame.duration;
 
-            await send(
-                BEGIN_FRAME_CHARACTERISTIC,
-                [frame.duration],
-                "withResponse",
-                CONTROLLER_SERVICE_ID,
-            );
-
-            const chunks = encodeRLEPixelData(frame.pixels);
-            console.log(chunks[0]);
-
-            for (const chunk of chunks) {
-                console.log(chunk);
+            // When frames use larger durations than the protocol max of 255
+            // we generate multiple frames using the same data
+            while (duration > 0) {
+                const frameDuration = Math.min(duration, 255);
                 await send(
-                    FRAME_CHUNK_CHARACTERISTIC,
-                    chunk,
+                    BEGIN_FRAME_CHARACTERISTIC,
+                    [frameDuration],
                     "withResponse",
                     CONTROLLER_SERVICE_ID,
                 );
+
+                const chunks = encodeRLEPixelData(frame.pixels);
+
+                for (const chunk of chunks) {
+                    await send(
+                        FRAME_CHUNK_CHARACTERISTIC,
+                        chunk,
+                        "withResponse",
+                        CONTROLLER_SERVICE_ID,
+                    );
+                }
+
+                if (duration <= 255) {
+                    break;
+                }
+
+                duration -= 255;
             }
         }
     }
@@ -69,7 +76,7 @@ const RLE_ENTRY_SIZE = 4;
 /// Max size for RLE data that can be sent over the wire
 const MAX_CHUNK_SIZE = 200;
 
-function encodeRLEPixelData(pixels: [number, number, number][]): number[][] {
+function encodeRLEPixelData(pixels: Pixel[]): number[][] {
     const chunks: number[][] = [];
 
     let currentChunk: number[] = [];
