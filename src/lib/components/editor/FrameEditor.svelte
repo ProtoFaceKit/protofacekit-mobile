@@ -55,6 +55,7 @@
 
     let pixels = $state(createEmptyPixels());
 
+    let backgroundContainer: HTMLDivElement | undefined = $state();
     let facesContainer: HTMLDivElement | undefined = $state();
     let panningContainer: HTMLDivElement | undefined = $state();
 
@@ -296,7 +297,8 @@
     }
 
     onMount(() => {
-        if (!panningContainer || !facesContainer) return;
+        if (!panningContainer || !facesContainer || !backgroundContainer)
+            return;
 
         const paint = (
             canvas: HTMLCanvasElement,
@@ -313,6 +315,7 @@
 
         const cleanupGestures = createFrameEditorGestures({
             ledScale: LED_SCALE,
+            backgroundContainer: backgroundContainer,
             panningContainer: panningContainer,
             wrapperContainer: facesContainer,
             paint,
@@ -347,100 +350,122 @@
     });
 </script>
 
-<div class="container">
-    <div class="actions">
-        <button class="action" onclick={onUndo} disabled={!history.undoEnabled}>
-            <SolarUndoLeftBold />
-        </button>
-        <button class="action" onclick={onRedo} disabled={!history.redoEnabled}>
-            <SolarUndoRightBold />
-        </button>
-        <button class="action" onclick={onToggleFullscreen}>
-            <SolarMaximizeBold />
-        </button>
-        <button class="action" onclick={onDuplicate}>
-            <SolarCopyBoldDuotone />
-        </button>
-        <button class="action" onclick={onDelete}>
-            <SolarTrashBin2BoldDuotone />
-        </button>
-    </div>
-
-    <div class="canvas" bind:this={facesContainer}>
-        <div class="panning" bind:this={panningContainer}></div>
-    </div>
-
-    <div class="toolbar">
-        <div class="toolbar-group">
+<div bind:this={backgroundContainer} class="background">
+    <div class="container">
+        <div class="actions">
             <button
-                class="toolbar-button"
-                class:toolbar-button--active={!tools.erase}
-                onclick={() => (tools.erase = false)}
+                class="action"
+                onclick={onUndo}
+                disabled={!history.undoEnabled}
             >
-                <SolarPaintRollerBoldDuotone />
+                <SolarUndoLeftBold />
             </button>
-
             <button
-                class="toolbar-button"
-                class:toolbar-button--active={tools.erase}
-                onclick={() => (tools.erase = true)}
+                class="action"
+                onclick={onRedo}
+                disabled={!history.redoEnabled}
             >
-                <SolarEraserBoldDuotone />
+                <SolarUndoRightBold />
+            </button>
+            <button class="action" onclick={onToggleFullscreen}>
+                <SolarMaximizeBold />
+            </button>
+            <button class="action" onclick={onDuplicate}>
+                <SolarCopyBoldDuotone />
+            </button>
+            <button class="action" onclick={onDelete}>
+                <SolarTrashBin2BoldDuotone />
             </button>
         </div>
 
-        <div class="toolbar-group">
-            <button
-                class="toolbar-button"
-                class:toolbar-button--active={tools.mirror}
-                onclick={() => (tools.mirror = !tools.mirror)}
-            >
-                <SolarMirrorLeftBold />
-            </button>
-
-            <button
-                class="toolbar-button"
-                class:toolbar-button--active={tools.showPreviousOutline}
-                onclick={() =>
-                    (tools.showPreviousOutline = !tools.showPreviousOutline)}
-            >
-                <SolarVideoFrameReplaceLineDuotone />
-            </button>
+        <div class="canvas" bind:this={facesContainer}>
+            <div class="panning" bind:this={panningContainer}></div>
         </div>
 
-        {#if !tools.erase}
+        <div class="toolbar">
             <div class="toolbar-group">
-                <div class="color-picker">
-                    <ColorPicker
-                        rgb={tools.paintColor}
-                        onInput={(color) => {
-                            if (color.rgb) tools.paintColor = color.rgb;
-                        }}
-                        position="responsive"
-                        label={""}
-                        isAlpha={false}
+                <button
+                    class="toolbar-button"
+                    class:toolbar-button--active={!tools.erase}
+                    onclick={() => (tools.erase = false)}
+                >
+                    <SolarPaintRollerBoldDuotone />
+                </button>
+
+                <button
+                    class="toolbar-button"
+                    class:toolbar-button--active={tools.erase}
+                    onclick={() => (tools.erase = true)}
+                >
+                    <SolarEraserBoldDuotone />
+                </button>
+            </div>
+
+            <div class="toolbar-group">
+                <button
+                    class="toolbar-button"
+                    class:toolbar-button--active={tools.mirror}
+                    onclick={() => (tools.mirror = !tools.mirror)}
+                >
+                    <SolarMirrorLeftBold />
+                </button>
+
+                <button
+                    class="toolbar-button"
+                    class:toolbar-button--active={tools.showPreviousOutline}
+                    onclick={() =>
+                        (tools.showPreviousOutline =
+                            !tools.showPreviousOutline)}
+                >
+                    <SolarVideoFrameReplaceLineDuotone />
+                </button>
+            </div>
+
+            {#if !tools.erase}
+                <div class="toolbar-group">
+                    <div class="color-picker">
+                        <ColorPicker
+                            rgb={tools.paintColor}
+                            onInput={(color) => {
+                                if (color.rgb) tools.paintColor = color.rgb;
+                            }}
+                            position="responsive"
+                            label={""}
+                            isAlpha={false}
+                        />
+                    </div>
+                </div>
+            {/if}
+
+            <div class="toolbar-group">
+                <div class="brush-size">
+                    <span class="brush-size-label">Brush Size</span>
+
+                    <input
+                        type="range"
+                        min="1"
+                        max="10"
+                        bind:value={tools.paintSize}
+                        class="slider"
                     />
                 </div>
-            </div>
-        {/if}
-
-        <div class="toolbar-group">
-            <div class="brush-size">
-                <span class="brush-size-label">Brush Size</span>
-
-                <input
-                    type="range"
-                    min="1"
-                    max="10"
-                    bind:value={tools.paintSize}
-                    class="slider"
-                />
             </div>
         </div>
     </div>
 </div>
 
 <style>
+    .background {
+        width: 100%;
+        height: 100%;
+        background-color: #000;
+        background-image:
+            linear-gradient(#222 1px, transparent 1px),
+            linear-gradient(90deg, #222 1px, transparent 1px);
+        background-size: 40px 40px;
+        touch-action: none;
+    }
+
     .container {
         position: relative;
         display: flex;

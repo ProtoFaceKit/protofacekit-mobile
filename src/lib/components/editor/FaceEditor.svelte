@@ -350,16 +350,6 @@
 
     .editor {
         flex: auto;
-        background-color: #000;
-        background-image:
-            linear-gradient(#222 1px, transparent 1px),
-            linear-gradient(90deg, #222 1px, transparent 1px);
-        background-size: 40px 40px; /* size of the grid squares */
-        background-size:
-            40px 40px,
-            40px 40px,
-            200px 200px,
-            200px 200px;
         touch-action: none;
     }
 

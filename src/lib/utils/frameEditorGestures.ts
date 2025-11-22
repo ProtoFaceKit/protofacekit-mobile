@@ -10,6 +10,7 @@ interface CreateFrameEditorGestures {
         drag: number;
     };
 
+    backgroundContainer: HTMLElement;
     wrapperContainer: HTMLElement;
     panningContainer: HTMLElement;
 
@@ -28,6 +29,7 @@ interface LastPaintedCell {
 export function createFrameEditorGestures({
     ledScale,
     thresholds,
+    backgroundContainer,
     wrapperContainer,
     panningContainer,
     paint,
@@ -85,6 +87,15 @@ export function createFrameEditorGestures({
 
         translateX = Math.min(Math.max(translateX, minX), maxX);
         translateY = Math.min(Math.max(translateY, minY), maxY);
+
+        backgroundContainer.style.backgroundPositionX = translateX + "px";
+        backgroundContainer.style.backgroundPositionY = translateY + "px";
+
+        const scaledGrid = 80 * currentScale;
+        backgroundContainer.style.backgroundSize = `
+             ${scaledGrid}px ${scaledGrid}px,
+             ${scaledGrid}px ${scaledGrid}px
+         `;
 
         panningContainer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
     }
