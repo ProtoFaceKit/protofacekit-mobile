@@ -28,8 +28,8 @@
         frame: FaceFrame;
         previousFrame?: FaceFrame;
 
-        onDelete: VoidFunction;
-        onDuplicate: VoidFunction;
+        onDelete?: VoidFunction;
+        onDuplicate?: VoidFunction;
         onToggleFullscreen: VoidFunction;
 
         onChangePixels: (pixels: Pixel[]) => void;
@@ -360,6 +360,7 @@
             >
                 <SolarUndoLeftBold />
             </button>
+
             <button
                 class="action"
                 onclick={onRedo}
@@ -367,15 +368,22 @@
             >
                 <SolarUndoRightBold />
             </button>
+
             <button class="action" onclick={onToggleFullscreen}>
                 <SolarMaximizeBold />
             </button>
-            <button class="action" onclick={onDuplicate}>
-                <SolarCopyBoldDuotone />
-            </button>
-            <button class="action" onclick={onDelete}>
-                <SolarTrashBin2BoldDuotone />
-            </button>
+
+            {#if onDuplicate}
+                <button class="action" onclick={onDuplicate}>
+                    <SolarCopyBoldDuotone />
+                </button>
+            {/if}
+
+            {#if onDelete}
+                <button class="action" onclick={onDelete}>
+                    <SolarTrashBin2BoldDuotone />
+                </button>
+            {/if}
         </div>
 
         <div class="canvas" bind:this={facesContainer}>

@@ -11,6 +11,7 @@
     import { deepClone } from "$lib/utils/clone";
     import { sleep } from "$lib/utils/timing";
     import { onMount } from "svelte";
+    import { createDefaultFramePixels } from "$lib/utils/image";
 
     interface Props {
         expression: FaceExpression | undefined;
@@ -75,10 +76,7 @@
 
     function onAddFrame() {
         onChangeFrames((frames) => {
-            const defaultPixelData: Pixel[] = Array.from(
-                { length: FACE_PANEL_TOTAL_PIXELS },
-                () => [0, 0, 0],
-            );
+            const defaultPixelData = createDefaultFramePixels();
             const newFrame: FaceFrame = {
                 duration: 100,
                 pixels: defaultPixelData,
