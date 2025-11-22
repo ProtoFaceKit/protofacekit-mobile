@@ -256,6 +256,10 @@
             transform 0.2s;
     }
 
+    .btn {
+        flex-shrink: 0;
+    }
+
     .frame-container {
         user-select: none;
         -webkit-user-select: none;
