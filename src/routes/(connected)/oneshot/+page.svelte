@@ -1,3 +1,11 @@
+<script>
+    import { writeFace } from "$lib/ble";
+    import { ExpressionType } from "$lib/types/data";
+    import { toastErrorMessage } from "$lib/utils/error";
+    import { createDefaultFramePixels } from "$lib/utils/image";
+    import { toast } from "svelte-sonner";
+</script>
+
 <div class="container">
     <div class="heading">
         <div class="path">
@@ -17,6 +25,31 @@
         <a class="btn btn--large btn--span" href="/oneshot/live">
             Live Editor
         </a>
+
+        <button
+            class="btn btn--large btn--span"
+            onclick={() => {
+                const writePromise = writeFace({
+                    expressions: {
+                        [ExpressionType.IDLE]: {
+                            frames: [
+                                {
+                                    pixels: createDefaultFramePixels(),
+                                    duration: 255,
+                                },
+                            ],
+                        },
+                    },
+                });
+                toast.promise(writePromise, {
+                    loading: "Sending face...",
+                    success: "Sent face to controller!",
+                    error: toastErrorMessage("Failed to send face"),
+                });
+            }}
+        >
+            Blank
+        </button>
     </div>
 </div>
 
