@@ -11,9 +11,9 @@
     import { open } from "@tauri-apps/plugin-dialog";
     import { readFile } from "@tauri-apps/plugin-fs";
     import { toast } from "svelte-sonner";
-    import { parseGIF, decompressFrames, type ParsedFrame } from "gifuct-js";
-    import FaceEditor from "$lib/components/editor/FaceEditor.svelte";
+    import { parseGIF, decompressFrames } from "gifuct-js";
     import { quantizePixel } from "$lib/utils/image";
+    import ExpressionEditor from "$lib/components/editor/ExpressionEditor.svelte";
 
     let face: Face | null = $state(null);
 
@@ -175,6 +175,24 @@
             };
         });
     }
+
+    function onChangeFrames(action: (frames: FaceFrame[]) => FaceFrame[]) {
+        if (!face) return;
+
+        const expressionType = ExpressionType.IDLE;
+        const currentFrames = face.expressions[expressionType]?.frames ?? [];
+        const newFrames = action(currentFrames);
+
+        face = {
+            ...face,
+            expressions: {
+                ...face.expressions,
+                [expressionType]: {
+                    frames: newFrames,
+                },
+            },
+        };
+    }
 </script>
 
 <div class="container">
@@ -184,32 +202,46 @@
         </div>
 
         <div class="actions">
-            <a class="btn" href="/oneshot">Back</a>
+            {#if face}
+                <button
+                    class="btn btn--primary"
+                    onclick={() => {
+                        if (!face) return;
+                        const writePromise = writeFace(face);
+                        toast.promise(writePromise, {
+                            loading: "Sending face...",
+                            success: "Sent face to controller!",
+                            error: toastErrorMessage("Failed to send face"),
+                        });
+                    }}
+                >
+                    Send
+                </button>
+
+                <button
+                    class="btn"
+                    onclick={() => {
+                        face = null;
+                    }}
+                >
+                    Back
+                </button>
+            {:else}
+                <a class="btn" href="/oneshot">Back</a>
+            {/if}
         </div>
     </div>
 
     {#if face}
-        <button
-            class="btn btn--span btn--large btn--primary"
-            onclick={() => {
-                if (!face) return;
-                const writePromise = writeFace(face);
-                toast.promise(writePromise, {
-                    loading: "Sending face...",
-                    success: "Sent face to controller!",
-                    error: toastErrorMessage("Failed to send face"),
-                });
-            }}
-        >
-            Send
+        <ExpressionEditor
+            expression={face.expressions[ExpressionType.IDLE]!}
+            {onChangeFrames}
+        />
+    {:else}
+        <button class="btn btn--span btn--large" onclick={onUpload}>
+            Upload Image
         </button>
-
-        <FaceEditor {face} onChangeFace={() => {}} />
     {/if}
-
-    <button class="btn btn--span btn--large" onclick={onUpload}>
-        Upload Image
-    </button>
 </div>
 
 <style>
