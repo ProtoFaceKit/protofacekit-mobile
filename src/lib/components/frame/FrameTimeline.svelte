@@ -136,6 +136,10 @@
     }
 
     function onDragEnd() {
+        if (autoScrollInterval) {
+            clearInterval(autoScrollInterval);
+        }
+
         if (draggingState.state === TimelineDraggingState.WAITING) {
             clearTimeout(draggingState.timeout);
         }
