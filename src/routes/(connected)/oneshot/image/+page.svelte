@@ -14,6 +14,7 @@
         type Pixel,
     } from "$lib/types/data";
     import { toastErrorMessage } from "$lib/utils/error";
+    import { quantizePixel } from "$lib/utils/image";
     import { open } from "@tauri-apps/plugin-dialog";
     import { readFile } from "@tauri-apps/plugin-fs";
     import { toast } from "svelte-sonner";
@@ -55,8 +56,17 @@
             };
         }
 
+        const frames = [
+            {
+                duration: 255,
+                pixels: mirroredPixels.map((pixel) => quantizePixel(pixel)),
+            },
+        ];
+
         face = {
-            expressions,
+            expressions: {
+                [ExpressionType.IDLE]: { frames },
+            },
         };
     }
 

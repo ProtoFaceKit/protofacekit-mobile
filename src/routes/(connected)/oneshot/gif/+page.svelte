@@ -13,6 +13,7 @@
     import { toast } from "svelte-sonner";
     import { parseGIF, decompressFrames, type ParsedFrame } from "gifuct-js";
     import FaceEditor from "$lib/components/editor/FaceEditor.svelte";
+    import { quantizePixel } from "$lib/utils/image";
 
     let face: Face | null = $state(null);
 
@@ -89,6 +90,10 @@
 
             frames.length = 0;
             frames.push(...reduced);
+        }
+
+        for (const frame of frames) {
+            frame.pixels = frame.pixels.map((pixel) => quantizePixel(pixel));
         }
 
         face = {
