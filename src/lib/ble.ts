@@ -1,5 +1,6 @@
 import { send } from "@mnlphlp/plugin-blec";
 import { ExpressionType, type Face, type Pixel } from "$lib/types/data";
+import { Mutex } from "async-mutex";
 
 export const CONTROLLER_SERVICE_ID = "bd6f7967-023c-4f0b-aad4-16a8a116f62c";
 
@@ -9,7 +10,15 @@ const BEGIN_EXPRESSION_CHARACTERISTIC = "d82855fb-c9ae-4322-9839-89d23839c569";
 const BEGIN_FRAME_CHARACTERISTIC = "21bced55-0b96-4711-a0f5-cd9653aca013";
 const FRAME_CHUNK_CHARACTERISTIC = "05940bf3-cc0f-4349-8ae4-e2bb89385540";
 
+const writeMutex = new Mutex();
+
 export async function writeFace(face: Face) {
+    await writeMutex.runExclusive(async () => {
+        await writeFaceBle(face);
+    });
+}
+
+async function writeFaceBle(face: Face) {
     await send(
         BEGIN_FACE_CHARACTERISTIC,
         [1],
