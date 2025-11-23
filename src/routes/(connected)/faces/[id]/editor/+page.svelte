@@ -3,7 +3,7 @@
     import PageHeading from "$lib/components/layout/PageHeading.svelte";
     import { faceContext } from "$lib/context/faceContext.svelte";
     import { faceStoreContext } from "$lib/context/faceStoreContext.svelte";
-    import { stateWithInitial } from "$lib/helpers/stateWithInitial.svelte";
+    import { stateWithInitial } from "$lib/utils/stateWithInitial.svelte";
     import type { Face } from "$lib/types/data";
     import { deepClone } from "$lib/utils/clone";
     import { toastErrorMessage } from "$lib/utils/error";
