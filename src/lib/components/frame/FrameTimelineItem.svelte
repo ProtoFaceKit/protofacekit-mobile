@@ -91,6 +91,7 @@
         display: flex;
         flex-flow: column;
         border: 1px solid #000;
+        width: 102px;
     }
 
     .frame--active {
