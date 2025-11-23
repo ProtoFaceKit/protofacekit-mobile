@@ -1,26 +1,26 @@
 <script lang="ts">
     import { writeFace } from "$lib/ble";
-    import FacePreview from "$lib/components/face/FacePreview.svelte";
+    import FaceRender3D from "$lib/components/face/FaceRender3D.svelte";
     import PageHeading from "$lib/components/layout/PageHeading.svelte";
-    import {
-        FACE_PANEL_HEIGHT,
-        FACE_PANEL_TOTAL_WIDTH,
-        FACE_PANEL_WIDTH,
-    } from "$lib/constants";
+    import { FACE_PANEL_HEIGHT, FACE_PANEL_WIDTH } from "$lib/constants";
     import {
         ALL_EXPRESSIONS,
         ExpressionType,
         type Face,
         type FaceExpression,
+        type FaceFrame,
         type Pixel,
     } from "$lib/types/data";
     import { toastErrorMessage } from "$lib/utils/error";
-    import { quantizePixel } from "$lib/utils/image";
+    import { applyPixelAdjustments, quantizePixel } from "$lib/utils/image";
     import { open } from "@tauri-apps/plugin-dialog";
     import { readFile } from "@tauri-apps/plugin-fs";
     import { toast } from "svelte-sonner";
 
-    let face: Face | null = $state(null);
+    let facePixels: Pixel[] | null = $state(null);
+
+    let gamma = $state(1.5);
+    let brightness = $state(1.0);
 
     async function onUploadFile(path: string) {
         const raw = await readFile(path);
@@ -57,19 +57,13 @@
             };
         }
 
-        const frames = [
-            {
-                duration: 255,
-                pixels: mirroredPixels.map((pixel) => quantizePixel(pixel)),
-            },
-        ];
-
-        face = {
-            expressions: {
-                [ExpressionType.IDLE]: { frames },
-            },
-        };
+        facePixels = mirroredPixels.map((pixel) => quantizePixel(pixel));
     }
+
+    const adjustedPixels = $derived.by(() => {
+        if (!facePixels) return null;
+        return applyPixelAdjustments(facePixels, gamma, brightness);
+    });
 
     async function onUpload() {
         const path = await open({
@@ -153,14 +147,44 @@
     </PageHeading>
 
     <div class="links">
-        {#if face}
-            <FacePreview {face} />
+        {#if adjustedPixels}
+            <FaceRender3D pixels={adjustedPixels} />
+
+            <label for="gamma">Gamma</label>
+            <input
+                id="gamma"
+                type="number"
+                bind:value={gamma}
+                min={0.1}
+                max={3.0}
+                step={0.1}
+            />
+            <label for="brightness">Brightness</label>
+            <input
+                id="brightness"
+                type="number"
+                bind:value={brightness}
+                min={0.1}
+                max={1.0}
+                step={0.1}
+            />
 
             <button
                 class="btn btn--span btn--large btn--primary"
                 onclick={() => {
-                    if (!face) return;
-                    const writePromise = writeFace(face);
+                    if (!adjustedPixels) return;
+                    const writePromise = writeFace({
+                        expressions: {
+                            [ExpressionType.IDLE]: {
+                                frames: [
+                                    {
+                                        duration: 255,
+                                        pixels: adjustedPixels,
+                                    },
+                                ],
+                            },
+                        },
+                    });
                     toast.promise(writePromise, {
                         loading: "Sending face...",
                         success: "Sent face to controller!",

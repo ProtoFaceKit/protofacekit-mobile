@@ -12,11 +12,13 @@
     import { readFile } from "@tauri-apps/plugin-fs";
     import { toast } from "svelte-sonner";
     import { parseGIF, decompressFrames } from "gifuct-js";
-    import { quantizePixel } from "$lib/utils/image";
+    import { applyPixelAdjustments, quantizePixel } from "$lib/utils/image";
     import ExpressionEditor from "$lib/components/editor/ExpressionEditor.svelte";
     import PageHeading from "$lib/components/layout/PageHeading.svelte";
 
     let face: Face | null = $state(null);
+    let gamma = $state(1.5);
+    let brightness = $state(1.0);
 
     async function onUploadFile(path: string) {
         const raw = await readFile(path);
@@ -74,7 +76,11 @@
 
             frames.push({
                 duration: gifFrame.delay,
-                pixels: mirroredPixels,
+                pixels: applyPixelAdjustments(
+                    mirroredPixels,
+                    gamma,
+                    brightness,
+                ),
             });
         }
 
@@ -152,31 +158,6 @@
         return { canvas, ctx };
     }
 
-    function loadImage(
-        raw: Uint8Array<ArrayBuffer>,
-    ): Promise<HTMLImageElement> {
-        const blob = new Blob([raw]);
-        const url = URL.createObjectURL(blob);
-
-        const image = new Image();
-        image.src = url;
-
-        return new Promise((resolve, reject) => {
-            image.onload = () => {
-                URL.revokeObjectURL(url);
-                resolve(image);
-            };
-            image.onerror = () => {
-                URL.revokeObjectURL(url);
-                reject();
-            };
-            image.onabort = () => {
-                URL.revokeObjectURL(url);
-                reject();
-            };
-        });
-    }
-
     function onChangeFrames(action: (frames: FaceFrame[]) => FaceFrame[]) {
         if (!face) return;
 
@@ -235,6 +216,25 @@
             {onChangeFrames}
         />
     {:else}
+        <label for="gamma">Gamma</label>
+        <input
+            id="gamma"
+            type="number"
+            bind:value={gamma}
+            min={0.1}
+            max={3.0}
+            step={0.1}
+        />
+        <label for="brightness">Brightness</label>
+        <input
+            id="brightness"
+            type="number"
+            bind:value={brightness}
+            min={0.1}
+            max={1.0}
+            step={0.1}
+        />
+
         <button class="btn btn--span btn--large" onclick={onUpload}>
             Upload Image
         </button>
