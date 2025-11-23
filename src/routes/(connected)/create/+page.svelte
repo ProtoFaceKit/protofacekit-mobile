@@ -1,5 +1,6 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import PageHeading from "$lib/components/layout/PageHeading.svelte";
     import { faceStoreContext } from "$lib/context/faceStoreContext.svelte";
     import type { StoredFace } from "$lib/types/faceStore";
     import { toastErrorMessage } from "$lib/utils/error";
@@ -48,10 +49,11 @@
 </script>
 
 <div class="container">
-    <div class="heading">
-        <h1>Create Face</h1>
-        <a class="btn" href="/">Back</a>
-    </div>
+    <PageHeading name="Create Face">
+        {#snippet actions()}
+            <a class="btn" href="/">Back</a>
+        {/snippet}
+    </PageHeading>
 
     <form class="form" onsubmit={onSubmit}>
         <div class="form-field">
@@ -79,26 +81,11 @@
 </div>
 
 <style>
-    .container {
-        padding: 1rem;
-    }
-
-    .heading {
-        display: flex;
-        flex-flow: row;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-    }
-
-    .heading > h1 {
-        font-size: 1.25rem;
-    }
-
     .form {
         display: flex;
         flex-flow: column;
         gap: 1rem;
+        padding: 1rem;
     }
 
     .form-field {

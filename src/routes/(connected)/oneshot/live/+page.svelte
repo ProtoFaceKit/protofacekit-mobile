@@ -2,6 +2,7 @@
     import { writeFace } from "$lib/ble";
     import FrameEditor from "$lib/components/editor/FrameEditor.svelte";
     import FaceRender3D from "$lib/components/face/FaceRender3D.svelte";
+    import PageHeading from "$lib/components/layout/PageHeading.svelte";
     import {
         ExpressionType,
         type FaceFrame,
@@ -41,6 +42,12 @@
 </script>
 
 <div class="container">
+    <PageHeading name="Live Editor">
+        {#snippet actions()}
+            <a class="btn" href="/oneshot">Back</a>
+        {/snippet}
+    </PageHeading>
+
     <div class="preview">
         <FaceRender3D pixels={frame.pixels ?? []} />
     </div>

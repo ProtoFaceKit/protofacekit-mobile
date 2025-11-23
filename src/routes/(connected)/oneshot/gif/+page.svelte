@@ -14,6 +14,7 @@
     import { parseGIF, decompressFrames } from "gifuct-js";
     import { quantizePixel } from "$lib/utils/image";
     import ExpressionEditor from "$lib/components/editor/ExpressionEditor.svelte";
+    import PageHeading from "$lib/components/layout/PageHeading.svelte";
 
     let face: Face | null = $state(null);
 
@@ -196,12 +197,8 @@
 </script>
 
 <div class="container">
-    <div class="heading">
-        <div class="path">
-            <p class="path--segment">Upload GIF</p>
-        </div>
-
-        <div class="actions">
+    <PageHeading name="Upload GIF">
+        {#snippet actions()}
             {#if face}
                 <button
                     class="btn btn--primary"
@@ -229,8 +226,8 @@
             {:else}
                 <a class="btn" href="/oneshot">Back</a>
             {/if}
-        </div>
-    </div>
+        {/snippet}
+    </PageHeading>
 
     {#if face}
         <ExpressionEditor
@@ -250,39 +247,5 @@
         flex-flow: column;
         height: 100%;
         overflow: hidden;
-    }
-
-    .heading {
-        display: flex;
-        flex-flow: row;
-        justify-content: space-between;
-        align-items: center;
-        overflow: hidden;
-        margin-bottom: 0.5rem;
-        padding: 0 0.5rem;
-    }
-
-    .path {
-        display: flex;
-        flex-flow: row;
-        gap: 0.5rem;
-        align-items: center;
-        flex: auto;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        padding-right: 0.5rem;
-    }
-
-    .path--segment {
-        color: #999;
-        font-size: 1.25rem;
-        white-space: nowrap;
-    }
-
-    .actions {
-        display: flex;
-        gap: 0.5rem;
-        flex-shrink: 0;
     }
 </style>
