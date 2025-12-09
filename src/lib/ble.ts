@@ -9,6 +9,7 @@ const DISPLAY_FACE_CHARACTERISTIC = "e66d5e7a-7458-4d71-b625-331062166d74";
 const BEGIN_EXPRESSION_CHARACTERISTIC = "d82855fb-c9ae-4322-9839-89d23839c569";
 const BEGIN_FRAME_CHARACTERISTIC = "21bced55-0b96-4711-a0f5-cd9653aca013";
 const FRAME_CHUNK_CHARACTERISTIC = "05940bf3-cc0f-4349-8ae4-e2bb89385540";
+const MIC_CALIBRATION = "6594db1e-650c-4c39-be44-bdc19e220752";
 
 const writeMutex = new Mutex();
 
@@ -16,6 +17,10 @@ export async function writeFace(face: Face) {
     await writeMutex.runExclusive(async () => {
         await writeFaceBle(face);
     });
+}
+
+export async function writeMicCalibration() {
+    await send(MIC_CALIBRATION, [1], "withResponse", CONTROLLER_SERVICE_ID);
 }
 
 async function writeFaceBle(face: Face) {

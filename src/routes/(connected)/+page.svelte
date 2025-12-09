@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { writeFace } from "$lib/ble";
+    import { writeFace, writeMicCalibration } from "$lib/ble";
     import StoredFaceItem from "$lib/components/face/StoredFaceItem.svelte";
     import { faceStoreContext } from "$lib/context/faceStoreContext.svelte";
     import Loader from "$lib/components/loader/Loader.svelte";
@@ -63,6 +63,27 @@
             });
         }
     }
+
+    let calibrating = $state(false);
+
+    async function onCalibrate() {
+        if (calibrating) return;
+
+        const writePromise = writeMicCalibration();
+        toast.promise(writePromise, {
+            loading: "Calibrating microphone..",
+            success: "Calibrated microphone!",
+            error: toastErrorMessage("Failed to calibrate"),
+        });
+
+        try {
+            await writePromise;
+        } catch (_err) {
+            // toast.promise catches this
+        } finally {
+            calibrating = false;
+        }
+    }
 </script>
 
 <div class="container">
@@ -103,6 +124,18 @@
 
     <button onclick={onImport} class="btn btn--large btn--span create">
         Import Faces
+    </button>
+
+    <button
+        onclick={onCalibrate}
+        disabled={calibrating}
+        class="btn btn--large btn--span create"
+    >
+        {#if calibrating}
+            Calibrating...
+        {:else}
+            Calibrate Microphone
+        {/if}
     </button>
 </div>
 
