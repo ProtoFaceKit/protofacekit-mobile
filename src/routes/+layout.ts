@@ -6,5 +6,11 @@ export const ssr = false;
 
 // Add dev tools
 if (import.meta.env.DEV) {
-    import("eruda").then((eruda) => eruda.default.init());
+    import("eruda").then((eruda) => {
+        eruda.default.init();
+        eruda.default.position({
+            x: 15,
+            y: 25,
+        });
+    });
 }
