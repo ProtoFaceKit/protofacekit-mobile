@@ -8,6 +8,8 @@
     "mnlphlp",
     "blec",
     "Protogen",
-    "tauri"
+    "tauri",
+    "iconify",
+    "unplugin"
   ]
 }
