@@ -1,15 +1,23 @@
 import type { StoredFace } from "$lib/types/faceStore";
-import { load } from "@tauri-apps/plugin-store";
+import { load, Store } from "@tauri-apps/plugin-store";
 import { Mutex } from "async-mutex";
 
 const FACES_KEY = "faces" as const;
 
-const facesStore = await load("facesStore.json", {
-    autoSave: false,
-    defaults: {
-        [FACES_KEY]: [],
-    },
-});
+let facesStore: Store | null = null;
+
+async function getFacesStore() {
+    if (facesStore === null) {
+        facesStore = await load("facesStore.json", {
+            autoSave: false,
+            defaults: {
+                [FACES_KEY]: [],
+            },
+        });
+    }
+
+    return facesStore;
+}
 
 const facesMutex = new Mutex();
 
@@ -93,12 +101,14 @@ export function createFaceStore(): FaceStore {
 }
 
 async function getStoredFaces() {
+    const facesStore = await getFacesStore();
     const value = await facesStore.get<StoredFace[]>(FACES_KEY);
     return value ?? [];
 }
 
 async function appendStoredFace(face: StoredFace) {
     return facesMutex.runExclusive(async () => {
+        const facesStore = await getFacesStore();
         const faces = await getStoredFaces();
         const newFaces = [...faces, face];
         await facesStore.set(FACES_KEY, newFaces);
@@ -109,6 +119,7 @@ async function appendStoredFace(face: StoredFace) {
 
 async function updateStoredFace(face: StoredFace) {
     return facesMutex.runExclusive(async () => {
+        const facesStore = await getFacesStore();
         const faces = await getStoredFaces();
         const newFaces = faces.map((otherFace) => {
             if (otherFace.id === face.id) {
@@ -125,6 +136,7 @@ async function updateStoredFace(face: StoredFace) {
 
 async function removeStoredFace(id: string) {
     return facesMutex.runExclusive(async () => {
+        const facesStore = await getFacesStore();
         const faces = await getStoredFaces();
         const newFaces = faces.filter((face) => face.id !== id);
         await facesStore.set(FACES_KEY, newFaces);
